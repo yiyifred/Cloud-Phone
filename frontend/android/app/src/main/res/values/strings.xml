@@ -29,8 +29,12 @@
     <string name="auth_message_setup_failed">密码更新失败</string>
     <string name="auth_message_setup_success">密码已更新，欢迎进入控制台</string>
     <string name="auth_message_session_failed">无法读取认证状态</string>
-    <string name="auth_success_title">已进入控制台</string>
-    <string name="auth_success_desc">认证成功。后续设备管理界面将在此继续开发。</string>
+    <string name="tab_devices">设备</string>
+    <string name="tab_settings">设置</string>
+    <string name="devices_placeholder">设备列表功能开发中</string>
+    <string name="settings_placeholder">外观、账号与刷新等设置将在此提供。</string>
+    <string name="settings_server_title">当前服务器</string>
+    <string name="settings_server_endpoint">%1$s:%2$d</string>
     <string name="server_setting_title">服务器连接设置</string>
     <string name="server_setting_desc">启动时会自动检测服务器在线状态，离线时将强制停留在此页面。</string>
     <string name="server_host_label">服务器地址</string>

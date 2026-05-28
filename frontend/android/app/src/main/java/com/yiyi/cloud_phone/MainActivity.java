@@ -1,5 +1,6 @@
 package com.yiyi.cloud_phone;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -36,7 +37,6 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout authContainer;
     private LinearLayout loginPanel;
     private LinearLayout setupPanel;
-    private LinearLayout successPanel;
     private TextView textServerStatus;
     private TextView textAuthEyebrow;
     private TextView textAuthTitle;
@@ -83,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
         authContainer = findViewById(R.id.authContainer);
         loginPanel = findViewById(R.id.loginPanel);
         setupPanel = findViewById(R.id.setupPanel);
-        successPanel = findViewById(R.id.successPanel);
         textServerStatus = findViewById(R.id.textServerStatus);
         textAuthEyebrow = findViewById(R.id.textAuthEyebrow);
         textAuthTitle = findViewById(R.id.textAuthTitle);
@@ -191,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
                 if (status.authenticated) {
                     mainHandler.post(() -> {
                         setAuthLoading(false);
-                        showAuthSuccess();
+                        openConsole();
                     });
                     return;
                 }
@@ -323,7 +322,7 @@ public class MainActivity extends AppCompatActivity {
                             nextPassword
                     );
                     toast(getString(R.string.auth_message_setup_success));
-                    showAuthSuccess();
+                    openConsole();
                 });
             } catch (Exception error) {
                 mainHandler.post(() -> {
@@ -363,7 +362,7 @@ public class MainActivity extends AppCompatActivity {
         if (result.authenticated) {
             SavedPasswordStore.save(this, host, port, password);
             editLoginPassword.setText("");
-            showAuthSuccess();
+            openConsole();
             return;
         }
         if (autoAttempt) {
@@ -381,7 +380,6 @@ public class MainActivity extends AppCompatActivity {
         textAuthTitle.setText(R.string.auth_setup_title);
         textAuthIntro.setText(R.string.auth_setup_intro);
         loginPanel.setVisibility(View.GONE);
-        successPanel.setVisibility(View.GONE);
         setupPanel.setVisibility(View.VISIBLE);
     }
 
@@ -390,7 +388,6 @@ public class MainActivity extends AppCompatActivity {
         textAuthTitle.setText(R.string.auth_setup_title);
         textAuthIntro.setText(R.string.auth_setup_intro);
         loginPanel.setVisibility(View.GONE);
-        successPanel.setVisibility(View.GONE);
         setupPanel.setVisibility(View.VISIBLE);
     }
 
@@ -399,19 +396,17 @@ public class MainActivity extends AppCompatActivity {
         textAuthTitle.setText(R.string.auth_login_title);
         textAuthIntro.setText(R.string.auth_login_intro);
         setupPanel.setVisibility(View.GONE);
-        successPanel.setVisibility(View.GONE);
         loginPanel.setVisibility(View.VISIBLE);
-    }
-
-    private void showAuthSuccess() {
-        hideAuthPanels();
-        successPanel.setVisibility(View.VISIBLE);
     }
 
     private void hideAuthPanels() {
         loginPanel.setVisibility(View.GONE);
         setupPanel.setVisibility(View.GONE);
-        successPanel.setVisibility(View.GONE);
+    }
+
+    private void openConsole() {
+        startActivity(new Intent(this, ConsoleActivity.class));
+        finish();
     }
 
     private void setAuthLoading(boolean loading) {

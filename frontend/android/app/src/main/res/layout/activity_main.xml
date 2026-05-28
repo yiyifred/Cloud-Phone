@@ -272,34 +272,6 @@
                         app:cornerRadius="12dp" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:id="@+id/successPanel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:background="@drawable/bg_auth_card"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical"
-                    android:padding="24dp"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/auth_success_title"
-                        android:textColor="@color/auth_text_primary"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:gravity="center"
-                        android:text="@string/auth_success_desc"
-                        android:textColor="@color/auth_text_secondary"
-                        android:textSize="14sp" />
-                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
