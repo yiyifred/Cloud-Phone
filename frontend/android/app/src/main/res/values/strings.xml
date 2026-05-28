@@ -22,4 +22,16 @@
     <string name="auth_message_password_too_short">新密码至少需要 6 位</string>
     <string name="auth_message_setup_success">界面演示：密码设置成功，请继续登录</string>
     <string name="auth_message_login_demo">界面演示：登录按钮已触发</string>
+    <string name="server_setting_title">服务器连接设置</string>
+    <string name="server_setting_desc">启动时会自动检测服务器在线状态，离线时将强制停留在此页面。</string>
+    <string name="server_host_label">服务器地址</string>
+    <string name="server_host_hint">例如 192.168.1.10</string>
+    <string name="server_port_label">端口</string>
+    <string name="server_port_hint">例如 9000</string>
+    <string name="server_save_action">保存并检测连接</string>
+    <string name="server_status_checking">正在检测服务器连接...</string>
+    <string name="server_status_online">服务器在线，可继续登录</string>
+    <string name="server_status_offline">服务器离线，请先配置地址</string>
+    <string name="server_invalid_port">端口必须在 1-65535</string>
+    <string name="server_saved_and_checking">地址已保存，正在检测...</string>
 </resources>
