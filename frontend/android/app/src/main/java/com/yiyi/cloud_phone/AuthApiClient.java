@@ -32,19 +32,22 @@ final class AuthApiClient {
         final boolean requiresPasswordChange;
         final boolean passwordConfigured;
         final String message;
+        final String encryptionKey;
 
         AuthResult(
                 boolean success,
                 boolean authenticated,
                 boolean requiresPasswordChange,
                 boolean passwordConfigured,
-                String message
+                String message,
+                String encryptionKey
         ) {
             this.success = success;
             this.authenticated = authenticated;
             this.requiresPasswordChange = requiresPasswordChange;
             this.passwordConfigured = passwordConfigured;
             this.message = message;
+            this.encryptionKey = encryptionKey;
         }
     }
 
@@ -77,7 +80,8 @@ final class AuthApiClient {
                 body.optBoolean("authenticated"),
                 body.optBoolean("requiresPasswordChange"),
                 body.optBoolean("passwordConfigured"),
-                body.optString("message", "")
+                body.optString("message", ""),
+                body.optString("encryptionKey", "")
         );
     }
 
@@ -109,12 +113,13 @@ final class AuthApiClient {
                 body.optBoolean("authenticated"),
                 body.optBoolean("requiresPasswordChange"),
                 body.optBoolean("passwordConfigured"),
-                body.optString("message", "")
+                body.optString("message", ""),
+                body.optString("encryptionKey", "")
         );
     }
 
     private AuthResult failed(String message) {
-        return new AuthResult(false, false, false, false, message);
+        return new AuthResult(false, false, false, false, message, "");
     }
 
     private JSONObject requestJson(String host, int port, String path, String method, String body)

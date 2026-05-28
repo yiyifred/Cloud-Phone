@@ -1,5 +1,6 @@
 package com.yiyi.cloud_phone;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -15,6 +16,11 @@ public class ConsoleActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (SessionKeyStore.load(this).isEmpty()) {
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+            return;
+        }
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_console);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.consoleRoot), (view, insets) -> {

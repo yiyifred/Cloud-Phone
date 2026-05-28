@@ -1,0 +1,111 @@
+package com.yiyi.cloud_phone;
+
+import android.content.Context;
+import android.net.Uri;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+final class CloudPhoneApiClient {
+    private CloudPhoneApiClient() {
+    }
+
+    static List<DeviceItem> fetchDevices(Context context, String host, int port) throws Exception {
+        JSONObject body = requestProtectedJson(context, host, port, "/api/devices", "GET");
+        if (!body.optBoolean("success", false)) {
+            throw new IOException(body.optString("message", "设备列表加载失败"));
+        }
+        JSONArray devices = body.optJSONArray("devices");
+        List<DeviceItem> items = new ArrayList<>();
+        if (devices == null) {
+            return items;
+        }
+        for (int index = 0; index < devices.length(); index += 1) {
+            items.add(new DeviceItem(devices.getJSONObject(index)));
+        }
+        return items;
+    }
+
+    static byte[] fetchScreenshot(
+            Context context,
+            String host,
+            int port,
+            String serial,
+            long tick
+    ) throws Exception {
+        String path = "/api/devices/" + Uri.encode(serial, StandardCharsets.UTF_8.name()) + "/screenshot?t=" + tick;
+        JSONObject body = requestProtectedJson(context, host, port, path, "GET");
+        if (!body.optBoolean("success", false)) {
+            throw new IOException(body.optString("message", "截图加载失败"));
+        }
+        String data = body.optString("data", "");
+        if (data.isEmpty()) {
+            throw new IOException("missing_screenshot_data");
+        }
+        return java.util.Base64.getDecoder().decode(data);
+    }
+
+    private static JSONObject requestProtectedJson(
+            Context context,
+            String host,
+            int port,
+            String path,
+            String method
+    ) throws Exception {
+        String sessionKey = SessionKeyStore.load(context);
+        if (sessionKey.isEmpty()) {
+            throw new IOException("missing_session_key");
+        }
+
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL("http://" + host + ":" + port + path);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod(method);
+            connection.setConnectTimeout(8000);
+            connection.setReadTimeout(12000);
+            connection.setInstanceFollowRedirects(true);
+
+            int code = connection.getResponseCode();
+            JSONObject envelope = new JSONObject(readStream(
+                    code >= 400 ? connection.getErrorStream() : connection.getInputStream()
+            ));
+
+            if (envelope.optBoolean("encrypted")) {
+                return ApiCrypto.decryptPayload(envelope, ApiCrypto.keyFromBase64(sessionKey));
+            }
+            if (code >= 400) {
+                throw new IOException(envelope.optString("message", "HTTP " + code));
+            }
+            return envelope;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private static String readStream(InputStream stream) throws IOException {
+        if (stream == null) {
+            return "{}";
+        }
+        StringBuilder builder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+        }
+        return builder.length() == 0 ? "{}" : builder.toString();
+    }
+}

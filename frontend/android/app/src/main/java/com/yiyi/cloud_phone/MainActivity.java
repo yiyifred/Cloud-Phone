@@ -321,6 +321,7 @@ public class MainActivity extends AppCompatActivity {
                             endpoint.port,
                             nextPassword
                     );
+                    SessionKeyStore.save(MainActivity.this, result.encryptionKey);
                     toast(getString(R.string.auth_message_setup_success));
                     openConsole();
                 });
@@ -361,6 +362,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (result.authenticated) {
             SavedPasswordStore.save(this, host, port, password);
+            SessionKeyStore.save(this, result.encryptionKey);
             editLoginPassword.setText("");
             openConsole();
             return;

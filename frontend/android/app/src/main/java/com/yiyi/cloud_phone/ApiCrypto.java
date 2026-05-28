@@ -27,6 +27,10 @@ final class ApiCrypto {
         return factory.generateSecret(spec).getEncoded();
     }
 
+    static byte[] keyFromBase64(String base64Key) {
+        return java.util.Base64.getDecoder().decode(base64Key);
+    }
+
     static JSONObject decryptPayload(JSONObject envelope, byte[] keyBytes) throws Exception {
         if (!envelope.optBoolean("encrypted") || !envelope.has("payload")) {
             throw new IllegalStateException("encrypted_payload_required");
