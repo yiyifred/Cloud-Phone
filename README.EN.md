@@ -115,7 +115,7 @@ Images are embedded in the corresponding feature sections below.
 - **UI language**: Simplified Chinese, English, Traditional Chinese, Japanese, Korean (under Appearance, persisted locally)
 - Session login (default password `admin`, please change it); change password and session expiry under Account
 - Light/dark theme under Appearance with persisted preference
-- **Android app**: on first server setup, defaults to the LAN gateway (`.1` on the current subnet, e.g. `192.168.31.1`) on port `3000`; after connect, routes to first-time password setup or login like the web UI
+- **Android app**: on first server setup, defaults to the LAN gateway (`.1` on the current subnet, e.g. `192.168.31.1`) on port `3000`; after connect, routes to first-time password setup or login like the web UI; saves the password encrypted on device for auto sign-in next launch
 - **Backend local data**: `backend/node/data/` holds `auth.key` and `cloud-phone.db` on disk only—never commit this directory
 
 ### Device workspace · Mirror cast (default)

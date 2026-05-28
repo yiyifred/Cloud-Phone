@@ -18,6 +18,8 @@
     <string name="auth_action_login">进入控制台</string>
     <string name="auth_action_setup">更新密码并登录</string>
     <string name="auth_session_checking">正在检查登录状态…</string>
+    <string name="auth_auto_signing_in">正在使用已保存的密码登录…</string>
+    <string name="auth_auto_login_failed">已保存的密码无效，请重新登录</string>
     <string name="auth_verifying">正在验证…</string>
     <string name="auth_updating">正在更新密码…</string>
     <string name="auth_enter_password">请输入登录密码</string>

@@ -19,15 +19,11 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -142,11 +138,17 @@ public class MainActivity extends AppCompatActivity {
             editServerPort.setError(getString(R.string.server_invalid_port));
             return false;
         }
-        getSharedPreferences(PREF_NAME, MODE_PRIVATE)
-                .edit()
+        android.content.SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
+        String previousHost = prefs.getString(KEY_SERVER_HOST, "");
+        int previousPort = prefs.getInt(KEY_SERVER_PORT, LanServerDefaults.DEFAULT_PORT);
+        prefs.edit()
                 .putString(KEY_SERVER_HOST, host)
                 .putInt(KEY_SERVER_PORT, port)
                 .apply();
+        if (!previousHost.isEmpty()
+                && (!previousHost.equals(host) || previousPort != port)) {
+            SavedPasswordStore.clear(this, previousHost, previousPort);
+        }
         return true;
     }
 
@@ -186,16 +188,46 @@ public class MainActivity extends AppCompatActivity {
         networkExecutor.execute(() -> {
             try {
                 AuthApiClient.SessionStatus status = authApiClient.fetchSession(host, port);
+                if (status.authenticated) {
+                    mainHandler.post(() -> {
+                        setAuthLoading(false);
+                        showAuthSuccess();
+                    });
+                    return;
+                }
+                if (!status.passwordConfigured) {
+                    mainHandler.post(() -> {
+                        setAuthLoading(false);
+                        showFirstTimeSetup();
+                    });
+                    return;
+                }
+                String savedPassword = SavedPasswordStore.load(MainActivity.this, host, port);
+                if (!savedPassword.isEmpty()) {
+                    mainHandler.post(() ->
+                            textAuthIntro.setText(getString(R.string.auth_auto_signing_in)));
+                    try {
+                        AuthApiClient.AuthResult loginResult = authApiClient.login(
+                                host,
+                                port,
+                                savedPassword
+                        );
+                        mainHandler.post(() -> {
+                            setAuthLoading(false);
+                            handleLoginResult(loginResult, savedPassword, host, port, true);
+                        });
+                    } catch (Exception error) {
+                        mainHandler.post(() -> {
+                            SavedPasswordStore.clear(MainActivity.this, host, port);
+                            setAuthLoading(false);
+                            toast(getString(R.string.auth_auto_login_failed));
+                            showLoginForm();
+                        });
+                    }
+                    return;
+                }
                 mainHandler.post(() -> {
                     setAuthLoading(false);
-                    if (status.authenticated) {
-                        showAuthSuccess();
-                        return;
-                    }
-                    if (!status.passwordConfigured) {
-                        showFirstTimeSetup();
-                        return;
-                    }
                     showLoginForm();
                 });
             } catch (Exception error) {
@@ -232,23 +264,7 @@ public class MainActivity extends AppCompatActivity {
                 mainHandler.post(() -> {
                     setAuthLoading(false);
                     buttonLogin.setEnabled(true);
-                    if (!result.success) {
-                        toast(TextUtils.isEmpty(result.message)
-                                ? getString(R.string.auth_message_login_failed)
-                                : result.message);
-                        return;
-                    }
-                    if (result.requiresPasswordChange) {
-                        pendingCurrentPassword = password;
-                        showForcedPasswordSetup();
-                        return;
-                    }
-                    if (result.authenticated) {
-                        editLoginPassword.setText("");
-                        showAuthSuccess();
-                        return;
-                    }
-                    toast(getString(R.string.auth_message_login_failed));
+                    handleLoginResult(result, password, endpoint.host, endpoint.port, false);
                 });
             } catch (Exception error) {
                 mainHandler.post(() -> {
@@ -300,6 +316,12 @@ public class MainActivity extends AppCompatActivity {
                     editNewPassword.setText("");
                     editConfirmPassword.setText("");
                     editLoginPassword.setText("");
+                    SavedPasswordStore.save(
+                            MainActivity.this,
+                            endpoint.host,
+                            endpoint.port,
+                            nextPassword
+                    );
                     toast(getString(R.string.auth_message_setup_success));
                     showAuthSuccess();
                 });
@@ -311,6 +333,46 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private void handleLoginResult(
+            AuthApiClient.AuthResult result,
+            String password,
+            String host,
+            int port,
+            boolean autoAttempt
+    ) {
+        if (!result.success) {
+            if (autoAttempt) {
+                SavedPasswordStore.clear(this, host, port);
+                toast(getString(R.string.auth_auto_login_failed));
+                showLoginForm();
+                return;
+            }
+            toast(TextUtils.isEmpty(result.message)
+                    ? getString(R.string.auth_message_login_failed)
+                    : result.message);
+            return;
+        }
+        if (result.requiresPasswordChange) {
+            pendingCurrentPassword = password;
+            SavedPasswordStore.clear(this, host, port);
+            showForcedPasswordSetup();
+            return;
+        }
+        if (result.authenticated) {
+            SavedPasswordStore.save(this, host, port, password);
+            editLoginPassword.setText("");
+            showAuthSuccess();
+            return;
+        }
+        if (autoAttempt) {
+            SavedPasswordStore.clear(this, host, port);
+            toast(getString(R.string.auth_auto_login_failed));
+            showLoginForm();
+            return;
+        }
+        toast(getString(R.string.auth_message_login_failed));
     }
 
     private void showFirstTimeSetup() {
