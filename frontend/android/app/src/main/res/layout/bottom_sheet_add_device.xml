@@ -46,8 +46,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/add_device_close"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            app:tint="@color/auth_text_secondary" />
+            android:scaleType="center" />
     </LinearLayout>
 
     <ScrollView
@@ -73,9 +72,18 @@
                     android:orientation="vertical"
                     android:padding="14dp">
 
+                    <ImageView
+                        android:id="@+id/imagePlatformAndroid"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center_horizontal"
+                        android:contentDescription="@string/add_device_platform_android" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="6dp"
                         android:text="@string/add_device_platform_android"
                         android:textColor="@color/auth_text_primary"
                         android:textSize="16sp"
@@ -87,7 +95,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:text="@string/add_device_mode_usb" />
+                        android:text="@string/add_device_mode_usb"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp"
+                        app:iconSize="20dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/buttonModePairCode"
@@ -95,7 +106,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="@string/add_device_mode_pair_code" />
+                        android:text="@string/add_device_mode_pair_code"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp"
+                        app:iconSize="20dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/buttonModeQr"
@@ -103,7 +117,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="@string/add_device_mode_qr" />
+                        android:text="@string/add_device_mode_qr"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp"
+                        app:iconSize="20dp" />
                 </LinearLayout>
 
                 <TextView

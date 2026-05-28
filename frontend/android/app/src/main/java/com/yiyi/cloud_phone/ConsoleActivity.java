@@ -30,6 +30,8 @@ public class ConsoleActivity extends AppCompatActivity {
         });
 
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        bottomNav.getMenu().findItem(R.id.nav_devices).setIcon(AppIcons.tabDevices(this));
+        bottomNav.getMenu().findItem(R.id.nav_settings).setIcon(AppIcons.tabSettings(this));
         ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (view, insets) -> {
             Insets navBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             view.setPadding(view.getPaddingLeft(), view.getPaddingTop(), view.getPaddingRight(), navBars.bottom);

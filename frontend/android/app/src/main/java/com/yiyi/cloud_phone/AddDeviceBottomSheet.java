@@ -127,9 +127,20 @@ public class AddDeviceBottomSheet extends BottomSheetDialogFragment {
         buttonQrConfirm = view.findViewById(R.id.buttonQrConfirm);
 
         ImageButton buttonClose = view.findViewById(R.id.buttonClose);
+        buttonClose.setImageDrawable(AppIcons.close(requireContext()));
         buttonClose.setOnClickListener(v -> dismiss());
 
-        view.findViewById(R.id.buttonModeUsb).setOnClickListener(v -> enterUsbStep());
+        ImageView platformIcon = view.findViewById(R.id.imagePlatformAndroid);
+        platformIcon.setImageDrawable(AppIcons.androidPlatform(requireContext()));
+
+        MaterialButton buttonModeUsb = view.findViewById(R.id.buttonModeUsb);
+        MaterialButton buttonModePairCode = view.findViewById(R.id.buttonModePairCode);
+        MaterialButton buttonModeQr = view.findViewById(R.id.buttonModeQr);
+        buttonModeUsb.setIcon(AppIcons.modeUsb(requireContext()));
+        buttonModePairCode.setIcon(AppIcons.modePairCode(requireContext()));
+        buttonModeQr.setIcon(AppIcons.modeQr(requireContext()));
+
+        buttonModeUsb.setOnClickListener(v -> enterUsbStep());
         view.findViewById(R.id.buttonModePairCode).setOnClickListener(v -> showStep(STEP_PAIR));
         view.findViewById(R.id.buttonModeQr).setOnClickListener(v -> enterQrStep());
 

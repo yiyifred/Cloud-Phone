@@ -12,6 +12,8 @@ fragment = "1.8.9"
 recyclerview = "1.4.0"
 swiperefreshlayout = "1.1.0"
 zxing = "3.5.3"
+iconics = "5.5.0"
+communityMaterial = "7.0.96.1-kotlin"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -26,6 +28,9 @@ fragment = { group = "androidx.fragment", name = "fragment", version.ref = "frag
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
 zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+iconics-core = { group = "com.mikepenz", name = "iconics-core", version.ref = "iconics" }
+iconics-views = { group = "com.mikepenz", name = "iconics-views", version.ref = "iconics" }
+community-material-typeface = { group = "com.mikepenz", name = "community-material-typeface", version.ref = "communityMaterial" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

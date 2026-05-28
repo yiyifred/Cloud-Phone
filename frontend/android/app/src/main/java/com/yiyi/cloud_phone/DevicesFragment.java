@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -95,6 +96,9 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
 
         swipeRefresh.setColorSchemeResources(R.color.auth_primary);
         swipeRefresh.setOnRefreshListener(() -> refreshDevices(true));
+        if (buttonAddDevice instanceof ImageButton) {
+            ((ImageButton) buttonAddDevice).setImageDrawable(AppIcons.addDevice(requireContext()));
+        }
         buttonAddDevice.setOnClickListener(v -> AddDeviceBottomSheet.show(this));
         updateHeader(new ArrayList<>(), false, "");
     }

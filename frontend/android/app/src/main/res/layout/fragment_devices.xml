@@ -72,8 +72,7 @@
                     android:background="@drawable/bg_add_device_button"
                     android:contentDescription="@string/devices_add_device"
                     android:padding="8dp"
-                    android:scaleType="center"
-                    android:src="@drawable/ic_add" />
+                    android:scaleType="center" />
             </LinearLayout>
 
             <TextView

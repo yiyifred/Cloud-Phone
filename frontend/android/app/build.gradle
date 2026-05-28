@@ -12,8 +12,8 @@ android {
         applicationId "com.yiyi.cloud_phone"
         minSdk 28
         targetSdk 36
-        versionCode 1208
-        versionName "0.12.8"
+        versionCode 1209
+        versionName "0.12.9"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -40,6 +40,9 @@ dependencies {
     implementation libs.recyclerview
     implementation libs.swiperefreshlayout
     implementation libs.zxing
+    implementation libs.iconics.core
+    implementation libs.iconics.views
+    implementation libs.community.material.typeface
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core

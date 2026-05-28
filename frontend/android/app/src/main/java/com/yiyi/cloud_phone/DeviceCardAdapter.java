@@ -67,6 +67,7 @@ final class DeviceCardAdapter extends RecyclerView.Adapter<DeviceCardAdapter.Hol
 
     final class Holder extends RecyclerView.ViewHolder {
         private final ImageView imageScreenshot;
+        private final ImageView imagePlaceholderIcon;
         private final LinearLayout placeholderContainer;
         private final TextView textPlaceholder;
         private final TextView textStatusBadge;
@@ -83,6 +84,8 @@ final class DeviceCardAdapter extends RecyclerView.Adapter<DeviceCardAdapter.Hol
         Holder(@NonNull View itemView) {
             super(itemView);
             imageScreenshot = itemView.findViewById(R.id.imageScreenshot);
+            imagePlaceholderIcon = itemView.findViewById(R.id.imagePlaceholderIcon);
+            imagePlaceholderIcon.setImageDrawable(AppIcons.devicePlaceholder(context));
             placeholderContainer = itemView.findViewById(R.id.placeholderContainer);
             textPlaceholder = itemView.findViewById(R.id.textPlaceholder);
             textStatusBadge = itemView.findViewById(R.id.textStatusBadge);

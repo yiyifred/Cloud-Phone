@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.9 - 2026-05-29
+
+- Android 客户端图标统一为 Community Material（Android-Iconics），与 Web 端 MDI 图标风格对齐；移除本地矢量图标资源
+
 ## 0.12.8 - 2026-05-29
 
 - Android 设备页新增「+」添加设备：USB 监听、配对码与二维码配对，流程对齐 Web 端

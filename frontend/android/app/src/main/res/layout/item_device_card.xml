@@ -37,11 +37,11 @@
                 android:orientation="vertical"
                 android:padding="12dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="📱"
-                    android:textSize="24sp" />
+                <ImageView
+                    android:id="@+id/imagePlaceholderIcon"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:contentDescription="@null" />
 
                 <TextView
                     android:id="@+id/textPlaceholder"
