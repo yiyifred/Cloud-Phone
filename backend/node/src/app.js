@@ -108,6 +108,15 @@ export function createApp() {
       return;
     }
 
+    if (method === "GET" && pathname === "/api/ping") {
+      sendJson(res, 200, {
+        success: true,
+        service: "cloud-phone-node",
+        version: APP_VERSION,
+      });
+      return;
+    }
+
     if (method === "POST" && pathname === "/api/auth/login") {
       try {
         const body = await readJsonBody(req);

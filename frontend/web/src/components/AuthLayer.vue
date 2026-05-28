@@ -4,7 +4,7 @@ import AuthPasswordModal from "./AuthPasswordModal.vue";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
-defineProps({
+const props = defineProps({
   showLoginModal: {
     type: Boolean,
     required: true,

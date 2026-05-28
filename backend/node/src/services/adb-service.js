@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import bonjourService from "bonjour-service";
 import { promisify } from "node:util";
+import mdns from "multicast-dns";
 
 import { runAdb } from "./adb-command.js";
 import { runWithAdbLock } from "./adb-lock.js";
@@ -10,7 +10,6 @@ import { getDeviceDisplayName } from "./device-display.js";
 import { getDeviceIpAddress } from "./device-ip.js";
 
 const execFileAsync = promisify(execFile);
-const { Bonjour } = bonjourService;
 
 function parseDeviceList(stdout) {
   return stdout
@@ -320,7 +319,7 @@ function buildConnectPortCandidates(preferredPort) {
 }
 
 async function waitForMdnsService({ serviceName, serviceType, host, timeoutMs }) {
-  const discovered = await discoverMdnsServiceWithBonjour({
+  const discovered = await discoverMdnsServiceWithMdns({
     serviceName,
     serviceType,
     host,
@@ -331,7 +330,7 @@ async function waitForMdnsService({ serviceName, serviceType, host, timeoutMs })
     return discovered;
   }
 
-  // Fallback to adb mdns services parsing if Bonjour discovery is unavailable.
+  // Fallback to adb mdns services parsing if JS mDNS discovery is unavailable.
   return waitForMdnsServiceWithAdb({ serviceName, serviceType, host, timeoutMs });
 }
 
@@ -369,82 +368,146 @@ async function listMdnsServicesWithAdb() {
   }
 }
 
+// Kept for backward compatibility of internal naming; implementation uses multicast-dns.
 async function discoverMdnsServiceWithBonjour({ serviceName, serviceType, host, timeoutMs }) {
-  const type = normalizeBonjourType(serviceType);
+  return discoverMdnsServiceWithMdns({ serviceName, serviceType, host, timeoutMs });
+}
 
-  if (!type) {
+async function discoverMdnsServiceWithMdns({ serviceName, serviceType, host, timeoutMs }) {
+  const normalizedType = normalizeMdnsServiceType(serviceType);
+  if (!normalizedType) {
     return null;
   }
 
+  const mdnsClient = mdns();
+
   return new Promise((resolve) => {
-    const bonjour = new Bonjour();
-    let browser = null;
     let settled = false;
+    const records = new Map();
 
     const finish = (value) => {
-      if (settled) {
-        return;
-      }
+      if (settled) return;
       settled = true;
       clearTimeout(timer);
       try {
-        browser?.stop();
-      } catch {}
-      try {
-        bonjour.destroy();
+        mdnsClient.removeListener("response", onResponse);
+        mdnsClient.destroy();
       } catch {}
       resolve(value);
     };
 
     const timer = setTimeout(() => finish(null), timeoutMs);
 
-    try {
-      browser = bonjour.find({ type }, (service) => {
-        const item = parseBonjourService(service);
-
-        if (!item) {
-          return;
-        }
-
+    const tryBuild = () => {
+      // We match by instance name in PTR: <Instance>.<type>.local
+      for (const [nameKey, entry] of records.entries()) {
+        const item = parseDnsSdEntry(nameKey, entry);
+        if (!item) continue;
         if (matchMdnsService(item, { serviceName, serviceType, host })) {
           finish(item);
+          return;
         }
-      });
-    } catch {
-      finish(null);
-    }
+      }
+    };
+
+    const onResponse = (res) => {
+      for (const answer of [...(res.answers ?? []), ...(res.additionals ?? [])]) {
+        if (!answer?.name || !answer?.type) continue;
+        const key = `${answer.name}|${answer.type}`;
+        records.set(key, answer);
+      }
+
+      // Build combined view by instance name.
+      // We keep a lightweight combined map keyed by instance FQDN.
+      const combined = new Map();
+      for (const answer of [...(res.answers ?? []), ...(res.additionals ?? [])]) {
+        if (!answer?.name || !answer?.type) continue;
+        const name = String(answer.name);
+        const type = String(answer.type);
+        if (type === "PTR") {
+          const instance = String(answer.data ?? "");
+          if (!instance) continue;
+          const entry = combined.get(instance) ?? {};
+          entry.ptr = answer;
+          combined.set(instance, entry);
+        } else if (type === "SRV") {
+          const entry = combined.get(name) ?? {};
+          entry.srv = answer;
+          combined.set(name, entry);
+        } else if (type === "TXT") {
+          const entry = combined.get(name) ?? {};
+          entry.txt = answer;
+          combined.set(name, entry);
+        } else if (type === "A") {
+          const entry = combined.get(name) ?? {};
+          entry.a = answer;
+          combined.set(name, entry);
+        }
+      }
+
+      for (const [instanceName, entry] of combined.entries()) {
+        // attach referenced A record via SRV target if present
+        const srvTarget = entry.srv?.data?.target;
+        if (srvTarget && !entry.a) {
+          // look for A in additionals
+          const a = [...(res.additionals ?? []), ...(res.answers ?? [])].find(
+            (r) => r?.type === "A" && r?.name === srvTarget,
+          );
+          if (a) entry.a = a;
+        }
+
+        const item = parseDnsSdEntry(instanceName, entry);
+        if (!item) continue;
+        if (item.serviceType !== serviceType) continue;
+        if (matchMdnsService(item, { serviceName, serviceType, host })) {
+          finish(item);
+          return;
+        }
+      }
+
+      tryBuild();
+    };
+
+    mdnsClient.on("response", onResponse);
+    mdnsClient.query([{ name: `${normalizedType}.local`, type: "PTR" }]);
   });
 }
 
-function parseBonjourService(service) {
-  const host = service?.addresses?.find((address) => /^\d{1,3}(\.\d{1,3}){3}$/.test(address));
-  const port = Number(service?.port);
-  const typeName = service?.type;
+function normalizeMdnsServiceType(serviceType) {
+  if (!serviceType) return null;
+  // input like "_cloudphone._tcp" => "_cloudphone._tcp"
+  const trimmed = serviceType.trim();
+  if (!trimmed.startsWith("_")) return null;
+  if (!trimmed.endsWith("._tcp")) return null;
+  return trimmed;
+}
 
-  if (!host || !Number.isInteger(port) || port <= 0) {
+function parseDnsSdEntry(instanceName, entry) {
+  const srv = entry?.srv;
+  const txt = entry?.txt;
+  const a = entry?.a;
+  const port = Number(srv?.data?.port);
+  const target = srv?.data?.target ? String(srv.data.target) : "";
+  const host = a?.data ? String(a.data) : "";
+
+  if (!instanceName || !host || !Number.isInteger(port) || port <= 0) {
     return null;
   }
 
-  const serviceType = typeName ? `_${typeName}._tcp` : null;
-  const name = String(service?.name ?? "").trim();
-  const fullName = serviceType ? `${name}.${serviceType}.` : name;
+  const serviceTypeMatch = instanceName.match(/(\._[^.]+?\._tcp)\.local$/);
+  const serviceType = serviceTypeMatch ? serviceTypeMatch[1] : null;
+  const name = String(instanceName).replace(/(\._[^.]+?\._tcp)\.local$/, "").replace(/\.$/, "");
 
   return {
-    raw: `${fullName} ${host}:${port}`,
-    fullName,
+    raw: `${instanceName} ${host}:${port}`,
+    fullName: instanceName,
     name,
     serviceType,
     host,
     port,
+    target,
+    txt: txt?.data ?? null,
   };
-}
-
-function normalizeBonjourType(serviceType) {
-  if (!serviceType) {
-    return null;
-  }
-
-  return serviceType.replace(/^_/, "").replace(/\._tcp$/, "");
 }
 
 function matchMdnsService(item, { serviceName, serviceType, host }) {

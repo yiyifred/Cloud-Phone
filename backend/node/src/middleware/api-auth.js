@@ -5,6 +5,7 @@ import { getSessionRecord, removeSession } from "../services/session-store.js";
 export const PUBLIC_API_PATHS = new Set([
   "/api/auth/session",
   "/api/auth/login",
+  "/api/ping",
 ]);
 
 export function isPublicApiPath(pathname, method) {
