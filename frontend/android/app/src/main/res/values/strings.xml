@@ -25,9 +25,9 @@
     <string name="server_setting_title">服务器连接设置</string>
     <string name="server_setting_desc">启动时会自动检测服务器在线状态，离线时将强制停留在此页面。</string>
     <string name="server_host_label">服务器地址</string>
-    <string name="server_host_hint">例如 192.168.1.10</string>
+    <string name="server_host_hint">例如 192.168.31.1</string>
     <string name="server_port_label">端口</string>
-    <string name="server_port_hint">例如 9000</string>
+    <string name="server_port_hint">例如 3000</string>
     <string name="server_save_action">保存并检测连接</string>
     <string name="server_status_checking">正在检测服务器连接...</string>
     <string name="server_status_online">服务器在线，可继续登录</string>

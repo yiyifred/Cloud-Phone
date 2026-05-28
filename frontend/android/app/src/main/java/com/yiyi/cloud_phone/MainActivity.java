@@ -28,8 +28,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_NAME = "cloud_phone_settings";
     private static final String KEY_SERVER_HOST = "server_host";
     private static final String KEY_SERVER_PORT = "server_port";
-    private static final String DEFAULT_SERVER_HOST = "127.0.0.1";
-    private static final int DEFAULT_SERVER_PORT = 9000;
 
     private LinearLayout loginPanel;
     private LinearLayout setupPanel;
@@ -132,9 +130,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadServerConfig() {
         String host = getSharedPreferences(PREF_NAME, MODE_PRIVATE)
-                .getString(KEY_SERVER_HOST, DEFAULT_SERVER_HOST);
+                .getString(KEY_SERVER_HOST, LanServerDefaults.defaultHost());
         int port = getSharedPreferences(PREF_NAME, MODE_PRIVATE)
-                .getInt(KEY_SERVER_PORT, DEFAULT_SERVER_PORT);
+                .getInt(KEY_SERVER_PORT, LanServerDefaults.DEFAULT_PORT);
         editServerHost.setText(host);
         editServerPort.setText(String.valueOf(port));
     }

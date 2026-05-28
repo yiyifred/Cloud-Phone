@@ -115,6 +115,7 @@ Images are embedded in the corresponding feature sections below.
 - **UI language**: Simplified Chinese, English, Traditional Chinese, Japanese, Korean (under Appearance, persisted locally)
 - Session login (default password `admin`, please change it); change password and session expiry under Account
 - Light/dark theme under Appearance with persisted preference
+- **Android app**: on first server setup, defaults to the LAN gateway (`.1` on the current subnet, e.g. `192.168.31.1`) on port `3000`
 
 ### Device workspace · Mirror cast (default)
 
