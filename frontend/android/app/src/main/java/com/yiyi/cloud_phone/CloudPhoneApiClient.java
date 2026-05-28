@@ -36,6 +36,38 @@ final class CloudPhoneApiClient {
         return items;
     }
 
+    static JSONObject pairWithCode(
+            Context context,
+            String host,
+            int port,
+            String deviceHost,
+            int devicePort,
+            String pairingCode
+    ) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("host", deviceHost);
+        body.put("port", devicePort);
+        body.put("pairingCode", pairingCode);
+        return postProtectedJson(context, host, port, "/api/devices/pair-code", body);
+    }
+
+    static JSONObject createQrSession(Context context, String host, int port) throws Exception {
+        return postProtectedJson(context, host, port, "/api/devices/qr-session", new JSONObject());
+    }
+
+    static JSONObject pairWithQr(
+            Context context,
+            String host,
+            int port,
+            String serviceName,
+            String pairingCode
+    ) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("serviceName", serviceName);
+        body.put("pairingCode", pairingCode);
+        return postProtectedJson(context, host, port, "/api/devices/pair-qr", body);
+    }
+
     static byte[] fetchScreenshot(
             Context context,
             String host,
@@ -62,10 +94,32 @@ final class CloudPhoneApiClient {
             String path,
             String method
     ) throws Exception {
+        return requestProtectedJson(context, host, port, path, method, null);
+    }
+
+    private static JSONObject postProtectedJson(
+            Context context,
+            String host,
+            int port,
+            String path,
+            JSONObject body
+    ) throws Exception {
+        return requestProtectedJson(context, host, port, path, "POST", body);
+    }
+
+    private static JSONObject requestProtectedJson(
+            Context context,
+            String host,
+            int port,
+            String path,
+            String method,
+            JSONObject plainBody
+    ) throws Exception {
         String sessionKey = SessionKeyStore.load(context);
         if (sessionKey.isEmpty()) {
             throw new IOException("missing_session_key");
         }
+        byte[] keyBytes = ApiCrypto.keyFromBase64(sessionKey);
 
         HttpURLConnection connection = null;
         try {
@@ -73,8 +127,20 @@ final class CloudPhoneApiClient {
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod(method);
             connection.setConnectTimeout(8000);
-            connection.setReadTimeout(12000);
+            connection.setReadTimeout(20000);
             connection.setInstanceFollowRedirects(true);
+
+            if ("POST".equals(method) && plainBody != null) {
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                connection.setRequestProperty("X-Encrypted-Request", "1");
+                JSONObject envelope = ApiCrypto.encryptPayload(plainBody, keyBytes);
+                byte[] bytes = envelope.toString().getBytes(StandardCharsets.UTF_8);
+                connection.setFixedLengthStreamingMode(bytes.length);
+                try (java.io.OutputStream output = connection.getOutputStream()) {
+                    output.write(bytes);
+                }
+            }
 
             int code = connection.getResponseCode();
             JSONObject envelope = new JSONObject(readStream(
@@ -82,7 +148,11 @@ final class CloudPhoneApiClient {
             ));
 
             if (envelope.optBoolean("encrypted")) {
-                return ApiCrypto.decryptPayload(envelope, ApiCrypto.keyFromBase64(sessionKey));
+                JSONObject decrypted = ApiCrypto.decryptPayload(envelope, keyBytes);
+                if (code >= 400 && !decrypted.optBoolean("success", false)) {
+                    throw new IOException(decrypted.optString("message", "HTTP " + code));
+                }
+                return decrypted;
             }
             if (code >= 400) {
                 throw new IOException(envelope.optString("message", "HTTP " + code));

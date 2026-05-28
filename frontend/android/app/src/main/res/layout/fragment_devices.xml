@@ -63,6 +63,17 @@
                     android:textColor="@color/auth_text_primary"
                     android:textSize="12sp"
                     android:textStyle="bold" />
+
+                <ImageButton
+                    android:id="@+id/buttonAddDevice"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_add_device_button"
+                    android:contentDescription="@string/devices_add_device"
+                    android:padding="8dp"
+                    android:scaleType="center"
+                    android:src="@drawable/ic_add" />
             </LinearLayout>
 
             <TextView

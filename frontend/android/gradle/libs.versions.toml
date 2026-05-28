@@ -11,6 +11,7 @@ securityCrypto = "1.1.0-alpha06"
 fragment = "1.8.9"
 recyclerview = "1.4.0"
 swiperefreshlayout = "1.1.0"
+zxing = "3.5.3"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -24,6 +25,7 @@ security-crypto = { group = "androidx.security", name = "security-crypto", versi
 fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
+zxing = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

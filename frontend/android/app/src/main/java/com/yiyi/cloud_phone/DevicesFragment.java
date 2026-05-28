@@ -39,6 +39,7 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
     private TextView textEmpty;
     private RecyclerView recyclerDevices;
     private DeviceCardAdapter adapter;
+    private View buttonAddDevice;
 
     private long screenshotTick;
     private long lastRefreshedAt;
@@ -86,6 +87,7 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
         textError = view.findViewById(R.id.textError);
         textEmpty = view.findViewById(R.id.textEmpty);
         recyclerDevices = view.findViewById(R.id.recyclerDevices);
+        buttonAddDevice = view.findViewById(R.id.buttonAddDevice);
 
         adapter = new DeviceCardAdapter(requireContext(), this);
         recyclerDevices.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -93,7 +95,16 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
 
         swipeRefresh.setColorSchemeResources(R.color.auth_primary);
         swipeRefresh.setOnRefreshListener(() -> refreshDevices(true));
+        buttonAddDevice.setOnClickListener(v -> AddDeviceBottomSheet.show(this));
         updateHeader(new ArrayList<>(), false, "");
+    }
+
+    List<DeviceItem> getDisplayedDevices() {
+        return new ArrayList<>(displayedDevices);
+    }
+
+    void refreshDevicesNow() {
+        refreshDevices(false);
     }
 
     @Override

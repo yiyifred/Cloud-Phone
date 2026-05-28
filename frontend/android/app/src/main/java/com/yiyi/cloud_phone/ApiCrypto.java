@@ -7,6 +7,8 @@ import java.security.MessageDigest;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 
+import java.security.SecureRandom;
+
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -29,6 +31,32 @@ final class ApiCrypto {
 
     static byte[] keyFromBase64(String base64Key) {
         return java.util.Base64.getDecoder().decode(base64Key);
+    }
+
+    static JSONObject encryptPayload(JSONObject value, byte[] keyBytes) throws Exception {
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(iv);
+        SecretKey key = new SecretKeySpec(normalizeKey(keyBytes), "AES");
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
+        byte[] plain = value.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] encryptedWithTag = cipher.doFinal(plain);
+        int tagLength = 16;
+        byte[] ciphertext = copyOfRange(encryptedWithTag, 0, encryptedWithTag.length - tagLength);
+        byte[] authTag = copyOfRange(
+                encryptedWithTag,
+                encryptedWithTag.length - tagLength,
+                encryptedWithTag.length
+        );
+        byte[] combined = new byte[iv.length + authTag.length + ciphertext.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(authTag, 0, combined, iv.length, authTag.length);
+        System.arraycopy(ciphertext, 0, combined, iv.length + authTag.length, ciphertext.length);
+        JSONObject envelope = new JSONObject();
+        envelope.put("encrypted", true);
+        envelope.put("v", 1);
+        envelope.put("payload", Base64.getEncoder().encodeToString(combined));
+        return envelope;
     }
 
     static JSONObject decryptPayload(JSONObject envelope, byte[] keyBytes) throws Exception {
