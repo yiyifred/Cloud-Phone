@@ -25,15 +25,17 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/textBrandTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/auth_welcome"
                 android:textColor="@color/auth_text_primary"
-                android:textSize="28sp"
+                android:textSize="30sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/textBrandSubtitle"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/auth_subtitle"
@@ -54,9 +56,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:background="@color/auth_surface"
+                android:background="@drawable/bg_auth_card"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -78,13 +80,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:hint="@string/server_host_label">
+                    android:hint="@string/server_host_label"
+                    app:boxBackgroundMode="outline"
+                    app:placeholderText="@string/server_host_hint">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/editServerHost"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/server_host_hint"
                         android:inputType="textUri"
                         android:maxLines="1"
                         android:textColor="@color/auth_text_primary" />
@@ -94,205 +97,210 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:hint="@string/server_port_label">
+                    android:hint="@string/server_port_label"
+                    app:boxBackgroundMode="outline"
+                    app:placeholderText="@string/server_port_hint">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/editServerPort"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/server_port_hint"
                         android:inputType="number"
                         android:maxLines="1"
                         android:textColor="@color/auth_text_primary" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <LinearLayout
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonSaveServer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/buttonSaveServer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:backgroundTint="@color/auth_primary"
-                        android:text="@string/server_save_action"
-                        android:textColor="@color/black"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                    android:layout_marginTop="14dp"
+                    android:text="@string/server_save_action"
+                    android:textColor="@color/auth_primary_text"
+                    app:backgroundTint="@color/auth_primary"
+                    app:cornerRadius="12dp" />
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/authContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:background="@color/auth_surface"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="6dp">
-
-                <Button
-                    android:id="@+id/buttonLoginTab"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/auth_primary"
-                    android:text="@string/auth_login_tab"
-                    android:textColor="@color/black"
-                    android:textStyle="bold" />
-
-                <Button
-                    android:id="@+id/buttonSetupTab"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/auth_primary_dark"
-                    android:text="@string/auth_setup_tab"
-                    android:textColor="@color/white"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/loginPanel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@color/auth_surface"
                 android:orientation="vertical"
-                android:padding="16dp"
                 android:visibility="gone">
 
                 <TextView
+                    android:id="@+id/textAuthEyebrow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@color/auth_accent_soft"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:text="@string/auth_eyebrow_login"
+                    android:textColor="@color/auth_primary_dark"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textAuthTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
                     android:text="@string/auth_login_title"
                     android:textColor="@color/auth_text_primary"
-                    android:textSize="20sp"
+                    android:textSize="24sp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:id="@+id/textAuthIntro"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="@string/auth_default_hint"
+                    android:lineSpacingExtra="2dp"
+                    android:text="@string/auth_login_intro"
                     android:textColor="@color/auth_text_secondary"
-                    android:textSize="13sp" />
+                    android:textSize="14sp" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="@string/auth_label_password">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editLoginPassword"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="@string/auth_hint_password"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:textColor="@color/auth_text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <Button
-                    android:id="@+id/buttonLogin"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:backgroundTint="@color/auth_primary"
-                    android:text="@string/auth_action_login"
-                    android:textColor="@color/black"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/setupPanel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@color/auth_surface"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:visibility="gone">
-
-                <TextView
+                <ProgressBar
+                    android:id="@+id/progressAuth"
+                    style="?android:attr/progressBarStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/auth_setup_title"
-                    android:textColor="@color/auth_text_primary"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="20dp"
+                    android:visibility="gone" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/auth_setup_desc"
-                    android:textColor="@color/auth_text_secondary"
-                    android:textSize="13sp" />
-
-                <com.google.android.material.textfield.TextInputLayout
+                <LinearLayout
+                    android:id="@+id/loginPanel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="@string/auth_label_current_password">
+                    android:background="@drawable/bg_auth_card"
+                    android:orientation="vertical"
+                    android:padding="18dp"
+                    android:visibility="gone">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editCurrentPassword"
+                    <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/auth_hint_password"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:textColor="@color/auth_text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:hint="@string/auth_label_password"
+                        app:boxBackgroundMode="outline"
+                        app:endIconMode="password_toggle"
+                        app:placeholderText="@string/auth_hint_password">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/auth_label_new_password">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editLoginPassword"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:textColor="@color/auth_text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editNewPassword"
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/auth_hint_new_password"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:textColor="@color/auth_text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_marginTop="10dp"
+                        android:text="@string/auth_default_hint"
+                        android:textColor="@color/auth_text_secondary"
+                        android:textSize="12sp" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/auth_label_confirm_password">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editConfirmPassword"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/buttonLogin"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/auth_hint_confirm_password"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:textColor="@color/auth_text_primary" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_marginTop="16dp"
+                        android:text="@string/auth_action_login"
+                        android:textColor="@color/auth_primary_text"
+                        app:backgroundTint="@color/auth_primary"
+                        app:cornerRadius="12dp" />
+                </LinearLayout>
 
-                <Button
-                    android:id="@+id/buttonSavePassword"
+                <LinearLayout
+                    android:id="@+id/setupPanel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:backgroundTint="@color/auth_primary"
-                    android:text="@string/auth_action_save_password"
-                    android:textColor="@color/black"
-                    android:textStyle="bold" />
+                    android:background="@drawable/bg_auth_card"
+                    android:orientation="vertical"
+                    android:padding="18dp"
+                    android:visibility="gone">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/auth_label_new_password"
+                        app:boxBackgroundMode="outline"
+                        app:endIconMode="password_toggle"
+                        app:placeholderText="@string/auth_hint_new_password">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editNewPassword"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:textColor="@color/auth_text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/auth_label_confirm_password"
+                        app:boxBackgroundMode="outline"
+                        app:endIconMode="password_toggle"
+                        app:placeholderText="@string/auth_hint_confirm_password">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editConfirmPassword"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:textColor="@color/auth_text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/buttonSavePassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/auth_action_setup"
+                        android:textColor="@color/auth_primary_text"
+                        app:backgroundTint="@color/auth_primary"
+                        app:cornerRadius="12dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/successPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_auth_card"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:padding="24dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/auth_success_title"
+                        android:textColor="@color/auth_text_primary"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="@string/auth_success_desc"
+                        android:textColor="@color/auth_text_secondary"
+                        android:textSize="14sp" />
+                </LinearLayout>
             </LinearLayout>
-
         </LinearLayout>
     </ScrollView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,8 +5,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,11 +16,18 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.CookieHandler;
+import java.net.CookieManager;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,26 +36,37 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_SERVER_HOST = "server_host";
     private static final String KEY_SERVER_PORT = "server_port";
 
+    private LinearLayout serverPanel;
+    private LinearLayout authContainer;
     private LinearLayout loginPanel;
     private LinearLayout setupPanel;
-    private LinearLayout serverPanel;
-    private Button buttonLoginTab;
-    private Button buttonSetupTab;
+    private LinearLayout successPanel;
     private TextView textServerStatus;
+    private TextView textAuthEyebrow;
+    private TextView textAuthTitle;
+    private TextView textAuthIntro;
+    private ProgressBar progressAuth;
     private TextInputEditText editServerHost;
     private TextInputEditText editServerPort;
-
-    private TextInputEditText editCurrentPassword;
+    private TextInputEditText editLoginPassword;
     private TextInputEditText editNewPassword;
     private TextInputEditText editConfirmPassword;
-    private TextInputEditText editLoginPassword;
+    private MaterialButton buttonLogin;
+    private MaterialButton buttonSavePassword;
 
+    private final AuthApiClient authApiClient = new AuthApiClient();
     private final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    private String pendingCurrentPassword = AuthApiClient.DEFAULT_PASSWORD;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (CookieHandler.getDefault() == null) {
+            CookieHandler.setDefault(new CookieManager());
+        }
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -66,34 +84,25 @@ public class MainActivity extends AppCompatActivity {
 
     private void bindViews() {
         serverPanel = findViewById(R.id.serverPanel);
+        authContainer = findViewById(R.id.authContainer);
         loginPanel = findViewById(R.id.loginPanel);
         setupPanel = findViewById(R.id.setupPanel);
-        buttonLoginTab = findViewById(R.id.buttonLoginTab);
-        buttonSetupTab = findViewById(R.id.buttonSetupTab);
+        successPanel = findViewById(R.id.successPanel);
         textServerStatus = findViewById(R.id.textServerStatus);
+        textAuthEyebrow = findViewById(R.id.textAuthEyebrow);
+        textAuthTitle = findViewById(R.id.textAuthTitle);
+        textAuthIntro = findViewById(R.id.textAuthIntro);
+        progressAuth = findViewById(R.id.progressAuth);
         editServerHost = findViewById(R.id.editServerHost);
         editServerPort = findViewById(R.id.editServerPort);
-
         editLoginPassword = findViewById(R.id.editLoginPassword);
-        editCurrentPassword = findViewById(R.id.editCurrentPassword);
         editNewPassword = findViewById(R.id.editNewPassword);
         editConfirmPassword = findViewById(R.id.editConfirmPassword);
+        buttonLogin = findViewById(R.id.buttonLogin);
+        buttonSavePassword = findViewById(R.id.buttonSavePassword);
     }
 
     private void bindEvents() {
-        buttonLoginTab.setOnClickListener(v -> {
-            if (serverPanel.getVisibility() == View.VISIBLE) {
-                return;
-            }
-            showLoginPanel();
-        });
-        buttonSetupTab.setOnClickListener(v -> {
-            if (serverPanel.getVisibility() == View.VISIBLE) {
-                return;
-            }
-            showSetupPanel();
-        });
-
         findViewById(R.id.buttonSaveServer).setOnClickListener(v -> {
             if (!saveServerConfigFromInput()) {
                 return;
@@ -102,30 +111,8 @@ public class MainActivity extends AppCompatActivity {
             checkServerAndContinue();
         });
 
-        findViewById(R.id.buttonLogin).setOnClickListener(v -> {
-            String loginPassword = valueOf(editLoginPassword);
-            if (loginPassword.isEmpty()) {
-                editLoginPassword.setError(getString(R.string.auth_hint_password));
-                return;
-            }
-            Toast.makeText(this, R.string.auth_message_login_demo, Toast.LENGTH_SHORT).show();
-        });
-
-        findViewById(R.id.buttonSavePassword).setOnClickListener(v -> {
-            String nextPassword = valueOf(editNewPassword);
-            String confirmPassword = valueOf(editConfirmPassword);
-            if (nextPassword.length() < 6) {
-                editNewPassword.setError(getString(R.string.auth_message_password_too_short));
-                return;
-            }
-            if (!nextPassword.equals(confirmPassword)) {
-                editConfirmPassword.setError(getString(R.string.auth_message_password_mismatch));
-                return;
-            }
-
-            Toast.makeText(this, R.string.auth_message_setup_success, Toast.LENGTH_SHORT).show();
-            showLoginPanel();
-        });
+        buttonLogin.setOnClickListener(v -> submitLogin());
+        buttonSavePassword.setOnClickListener(v -> submitPasswordSetup());
     }
 
     private void loadServerConfig() {
@@ -181,12 +168,217 @@ public class MainActivity extends AppCompatActivity {
             boolean online = pingServer(host, port);
             mainHandler.post(() -> {
                 if (online) {
-                    showAuthMode();
+                    beginAuthFlow(host, port);
                 } else {
                     forceServerSettingsMode(getString(R.string.server_status_offline));
                 }
             });
         });
+    }
+
+    private void beginAuthFlow(String host, int port) {
+        serverPanel.setVisibility(View.GONE);
+        authContainer.setVisibility(View.VISIBLE);
+        textServerStatus.setText(getString(R.string.server_status_online));
+        hideAuthPanels();
+        setAuthLoading(true);
+
+        networkExecutor.execute(() -> {
+            try {
+                AuthApiClient.SessionStatus status = authApiClient.fetchSession(host, port);
+                mainHandler.post(() -> {
+                    setAuthLoading(false);
+                    if (status.authenticated) {
+                        showAuthSuccess();
+                        return;
+                    }
+                    if (!status.passwordConfigured) {
+                        showFirstTimeSetup();
+                        return;
+                    }
+                    showLoginForm();
+                });
+            } catch (Exception error) {
+                mainHandler.post(() -> {
+                    setAuthLoading(false);
+                    showLoginForm();
+                    toast(getString(R.string.auth_message_session_failed));
+                });
+            }
+        });
+    }
+
+    private void submitLogin() {
+        String password = valueOf(editLoginPassword);
+        if (password.isEmpty()) {
+            editLoginPassword.setError(getString(R.string.auth_enter_password));
+            return;
+        }
+
+        ServerEndpoint endpoint = readServerEndpoint();
+        if (endpoint == null) {
+            return;
+        }
+
+        setAuthLoading(true);
+        buttonLogin.setEnabled(false);
+        networkExecutor.execute(() -> {
+            try {
+                AuthApiClient.AuthResult result = authApiClient.login(
+                        endpoint.host,
+                        endpoint.port,
+                        password
+                );
+                mainHandler.post(() -> {
+                    setAuthLoading(false);
+                    buttonLogin.setEnabled(true);
+                    if (!result.success) {
+                        toast(TextUtils.isEmpty(result.message)
+                                ? getString(R.string.auth_message_login_failed)
+                                : result.message);
+                        return;
+                    }
+                    if (result.requiresPasswordChange) {
+                        pendingCurrentPassword = password;
+                        showForcedPasswordSetup();
+                        return;
+                    }
+                    if (result.authenticated) {
+                        editLoginPassword.setText("");
+                        showAuthSuccess();
+                        return;
+                    }
+                    toast(getString(R.string.auth_message_login_failed));
+                });
+            } catch (Exception error) {
+                mainHandler.post(() -> {
+                    setAuthLoading(false);
+                    buttonLogin.setEnabled(true);
+                    toast(getString(R.string.auth_message_login_failed));
+                });
+            }
+        });
+    }
+
+    private void submitPasswordSetup() {
+        String nextPassword = valueOf(editNewPassword);
+        String confirmPassword = valueOf(editConfirmPassword);
+        if (nextPassword.length() < 6) {
+            editNewPassword.setError(getString(R.string.auth_message_password_too_short));
+            return;
+        }
+        if (!nextPassword.equals(confirmPassword)) {
+            editConfirmPassword.setError(getString(R.string.auth_message_password_mismatch));
+            return;
+        }
+
+        ServerEndpoint endpoint = readServerEndpoint();
+        if (endpoint == null) {
+            return;
+        }
+
+        setAuthLoading(true);
+        buttonSavePassword.setEnabled(false);
+        String currentPassword = pendingCurrentPassword;
+        networkExecutor.execute(() -> {
+            try {
+                AuthApiClient.AuthResult result = authApiClient.changePassword(
+                        endpoint.host,
+                        endpoint.port,
+                        currentPassword,
+                        nextPassword
+                );
+                mainHandler.post(() -> {
+                    setAuthLoading(false);
+                    buttonSavePassword.setEnabled(true);
+                    if (!result.success || !result.authenticated) {
+                        toast(TextUtils.isEmpty(result.message)
+                                ? getString(R.string.auth_message_setup_failed)
+                                : result.message);
+                        return;
+                    }
+                    editNewPassword.setText("");
+                    editConfirmPassword.setText("");
+                    editLoginPassword.setText("");
+                    toast(getString(R.string.auth_message_setup_success));
+                    showAuthSuccess();
+                });
+            } catch (Exception error) {
+                mainHandler.post(() -> {
+                    setAuthLoading(false);
+                    buttonSavePassword.setEnabled(true);
+                    toast(getString(R.string.auth_message_setup_failed));
+                });
+            }
+        });
+    }
+
+    private void showFirstTimeSetup() {
+        pendingCurrentPassword = AuthApiClient.DEFAULT_PASSWORD;
+        textAuthEyebrow.setText(R.string.auth_eyebrow_setup);
+        textAuthTitle.setText(R.string.auth_setup_title);
+        textAuthIntro.setText(R.string.auth_setup_intro);
+        loginPanel.setVisibility(View.GONE);
+        successPanel.setVisibility(View.GONE);
+        setupPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void showForcedPasswordSetup() {
+        textAuthEyebrow.setText(R.string.auth_eyebrow_setup);
+        textAuthTitle.setText(R.string.auth_setup_title);
+        textAuthIntro.setText(R.string.auth_setup_intro);
+        loginPanel.setVisibility(View.GONE);
+        successPanel.setVisibility(View.GONE);
+        setupPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void showLoginForm() {
+        textAuthEyebrow.setText(R.string.auth_eyebrow_login);
+        textAuthTitle.setText(R.string.auth_login_title);
+        textAuthIntro.setText(R.string.auth_login_intro);
+        setupPanel.setVisibility(View.GONE);
+        successPanel.setVisibility(View.GONE);
+        loginPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void showAuthSuccess() {
+        hideAuthPanels();
+        successPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void hideAuthPanels() {
+        loginPanel.setVisibility(View.GONE);
+        setupPanel.setVisibility(View.GONE);
+        successPanel.setVisibility(View.GONE);
+    }
+
+    private void setAuthLoading(boolean loading) {
+        progressAuth.setVisibility(loading ? View.VISIBLE : View.GONE);
+        buttonLogin.setEnabled(!loading);
+        buttonSavePassword.setEnabled(!loading);
+    }
+
+    private void forceServerSettingsMode(String statusText) {
+        serverPanel.setVisibility(View.VISIBLE);
+        authContainer.setVisibility(View.GONE);
+        hideAuthPanels();
+        setAuthLoading(false);
+        textServerStatus.setText(statusText);
+    }
+
+    private ServerEndpoint readServerEndpoint() {
+        String host = valueOf(editServerHost);
+        String portText = valueOf(editServerPort);
+        if (host.isEmpty() || portText.isEmpty()) {
+            forceServerSettingsMode(getString(R.string.server_status_offline));
+            return null;
+        }
+        try {
+            return new ServerEndpoint(host, Integer.parseInt(portText));
+        } catch (NumberFormatException error) {
+            forceServerSettingsMode(getString(R.string.server_status_offline));
+            return null;
+        }
     }
 
     private boolean pingServer(String host, int port) {
@@ -208,33 +400,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void forceServerSettingsMode(String statusText) {
-        serverPanel.setVisibility(View.VISIBLE);
-        loginPanel.setVisibility(View.GONE);
-        setupPanel.setVisibility(View.GONE);
-        textServerStatus.setText(statusText);
-    }
-
-    private void showAuthMode() {
-        serverPanel.setVisibility(View.GONE);
-        textServerStatus.setText(getString(R.string.server_status_online));
-        showLoginPanel();
-    }
-
-    private void showLoginPanel() {
-        loginPanel.setVisibility(View.VISIBLE);
-        setupPanel.setVisibility(View.GONE);
-        buttonLoginTab.setBackgroundTintList(getColorStateList(R.color.auth_primary));
-        buttonSetupTab.setBackgroundTintList(getColorStateList(R.color.auth_primary_dark));
-    }
-
-    private void showSetupPanel() {
-        loginPanel.setVisibility(View.GONE);
-        setupPanel.setVisibility(View.VISIBLE);
-        buttonLoginTab.setBackgroundTintList(getColorStateList(R.color.auth_primary_dark));
-        buttonSetupTab.setBackgroundTintList(getColorStateList(R.color.auth_primary));
-    }
-
     private String valueOf(TextInputEditText input) {
         if (input.getText() == null) {
             return "";
@@ -242,9 +407,23 @@ public class MainActivity extends AppCompatActivity {
         return input.getText().toString().trim();
     }
 
+    private void toast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     protected void onDestroy() {
         networkExecutor.shutdownNow();
         super.onDestroy();
+    }
+
+    private static final class ServerEndpoint {
+        final String host;
+        final int port;
+
+        ServerEndpoint(String host, int port) {
+            this.host = host;
+            this.port = port;
+        }
     }
 }

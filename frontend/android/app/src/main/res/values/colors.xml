@@ -8,4 +8,7 @@
     <color name="auth_primary_dark">#15803D</color>
     <color name="auth_text_primary">#0F172A</color>
     <color name="auth_text_secondary">#475569</color>
+    <color name="auth_line">#D7E0EA</color>
+    <color name="auth_primary_text">#052E16</color>
+    <color name="auth_accent_soft">#E8F7EE</color>
 </resources>

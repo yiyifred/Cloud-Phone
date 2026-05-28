@@ -11,6 +11,7 @@ node_modules/
 dist/
 build/
 coverage/
+# Local secrets: auth.key (encryption key) and cloud-phone.db (password store)
 backend/node/data/
 backend/source/scrcpy/build/
 backend/source/scrcpy/.gradle/
