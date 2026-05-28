@@ -9,14 +9,14 @@ export function getStoredTheme() {
       return stored;
     }
   } catch {
-    // Ignore storage errors and fall back to dark mode.
+    // Ignore storage errors and fall back to light mode.
   }
 
-  return "dark";
+  return "light";
 }
 
 export function applyTheme(theme) {
-  const resolvedTheme = THEMES.includes(theme) ? theme : "dark";
+  const resolvedTheme = THEMES.includes(theme) ? theme : "light";
   document.documentElement.dataset.theme = resolvedTheme;
   return resolvedTheme;
 }
