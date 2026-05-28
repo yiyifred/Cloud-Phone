@@ -1,3 +1,25 @@
 <resources>
     <string name="app_name">Cloud-Phone</string>
+    <string name="auth_welcome">Cloud Phone</string>
+    <string name="auth_subtitle">Secure access for your device console</string>
+    <string name="auth_login_tab">登录</string>
+    <string name="auth_setup_tab">首次设置密码</string>
+    <string name="auth_default_hint">默认初始密码：admin</string>
+    <string name="auth_login_title">登录账号</string>
+    <string name="auth_setup_title">设置新密码</string>
+    <string name="auth_login_desc">首次登录如使用默认密码，需先设置新密码后才能继续。</string>
+    <string name="auth_setup_desc">请输入默认密码并设置一个至少 6 位的新密码。</string>
+    <string name="auth_label_current_password">当前密码</string>
+    <string name="auth_label_password">登录密码</string>
+    <string name="auth_label_new_password">新密码</string>
+    <string name="auth_label_confirm_password">确认新密码</string>
+    <string name="auth_hint_password">请输入密码</string>
+    <string name="auth_hint_new_password">至少 6 位</string>
+    <string name="auth_hint_confirm_password">再次输入新密码</string>
+    <string name="auth_action_login">进入控制台</string>
+    <string name="auth_action_save_password">保存并登录</string>
+    <string name="auth_message_password_mismatch">两次输入的新密码不一致</string>
+    <string name="auth_message_password_too_short">新密码至少需要 6 位</string>
+    <string name="auth_message_setup_success">界面演示：密码设置成功，请继续登录</string>
+    <string name="auth_message_login_demo">界面演示：登录按钮已触发</string>
 </resources>

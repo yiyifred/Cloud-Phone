@@ -1513,6 +1513,104 @@ h2 {
   align-items: center;
 }
 
+.auth-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 24rem) minmax(0, 26rem);
+  gap: 1rem;
+  align-items: stretch;
+  width: min(100%, 56rem);
+}
+
+.auth-stage__aside {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 1.35rem;
+  background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+  backdrop-filter: blur(var(--blur));
+  box-shadow: var(--shadow);
+}
+
+.auth-stage__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  line-height: 1.15;
+}
+
+.auth-stage__desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.auth-stage__cards {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-stage__card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg) 66%, transparent);
+}
+
+.auth-stage__card h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-family: var(--font-heading);
+}
+
+.auth-stage__card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.auth-stage__card--hint h3 {
+  color: var(--success);
+}
+
+.auth-stage__steps {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-stage__step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+}
+
+.auth-stage__step strong {
+  font-size: 0.84rem;
+}
+
+.auth-stage__step span {
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.auth-stage__panel {
+  display: flex;
+  align-items: stretch;
+}
+
 .auth-modal {
   width: min(100%, 26rem);
   padding: 1.75rem;
@@ -2621,6 +2719,29 @@ code {
 
   .modal-layer--auth {
     align-items: center;
+  }
+
+  .auth-stage {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .auth-stage__aside {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .auth-stage__title {
+    font-size: 1.2rem;
+  }
+
+  .auth-stage__cards {
+    gap: 0.55rem;
+  }
+
+  .auth-stage__step {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .device-workspace__split {

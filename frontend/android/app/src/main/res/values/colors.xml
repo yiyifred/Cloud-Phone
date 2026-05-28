@@ -2,4 +2,10 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="auth_background">#0B1220</color>
+    <color name="auth_surface">#111C32</color>
+    <color name="auth_primary">#22C55E</color>
+    <color name="auth_primary_dark">#16A34A</color>
+    <color name="auth_text_primary">#F8FAFC</color>
+    <color name="auth_text_secondary">#94A3B8</color>
 </resources>
