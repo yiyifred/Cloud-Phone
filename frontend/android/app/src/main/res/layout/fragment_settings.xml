@@ -13,42 +13,42 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="@string/settings_eyebrow"
+            android:textAllCaps="false"
+            android:textColor="@color/auth_primary"
+            android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:text="@string/tab_settings"
             android:textColor="@color/auth_text_primary"
             android:textSize="22sp"
             android:textStyle="bold" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_auth_card"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_server_title"
-                android:textColor="@color/auth_text_primary"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/textServerEndpoint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textColor="@color/auth_text_secondary"
-                android:textSize="14sp" />
-        </LinearLayout>
-
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="@string/settings_placeholder"
+            android:layout_marginTop="6dp"
+            android:text="@string/settings_desc"
             android:textColor="@color/auth_text_secondary"
-            android:textSize="13sp" />
+            android:textSize="14sp" />
+
+        <include
+            android:id="@+id/sectionAccount"
+            layout="@layout/settings_section_account" />
+
+        <include
+            android:id="@+id/sectionAppearance"
+            layout="@layout/settings_section_appearance" />
+
+        <include
+            android:id="@+id/sectionRefresh"
+            layout="@layout/settings_section_refresh" />
+
+        <include
+            android:id="@+id/sectionServer"
+            layout="@layout/settings_section_server" />
     </LinearLayout>
 </ScrollView>

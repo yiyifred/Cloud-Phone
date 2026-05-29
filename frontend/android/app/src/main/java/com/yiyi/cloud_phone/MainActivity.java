@@ -29,6 +29,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
+    public static final String EXTRA_MANAGE_SERVER = "manage_server";
+
     private static final String PREF_NAME = "cloud_phone_settings";
     private static final String KEY_SERVER_HOST = "server_host";
     private static final String KEY_SERVER_PORT = "server_port";
@@ -74,6 +76,11 @@ public class MainActivity extends AppCompatActivity {
         bindViews();
         bindEvents();
         loadServerConfig();
+        if (getIntent().getBooleanExtra(EXTRA_MANAGE_SERVER, false)) {
+            SessionKeyStore.clear(this);
+            forceServerSettingsMode(getString(R.string.settings_change_server_intro));
+            return;
+        }
         forceServerSettingsMode(getString(R.string.server_status_checking));
         checkServerAndContinue();
     }

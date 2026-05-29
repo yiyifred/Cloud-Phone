@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.13 - 2026-05-29
+
+- Android 设置页与 Web 对齐：账号（密码状态、会话到期、改密、退出）、外观（语言/深浅色主题）、刷新间隔（1–120 秒）、更换服务器
+- Android 设备画廊轮询读取设置中的刷新间隔；Material3 DayNight 与夜间配色
+- README 中英文：新增 Android 客户端专章与 Web/Android 能力对照表
+
 ## 0.12.12 - 2026-05-29
 
 - Android 全屏投屏：投屏参数与 Web/桌面端对齐（虚拟屏预设、`__main__`/`__custom__`、`start_app`、`audioDup` SDK 33+、摄像头音频缓冲等）；摄像头模式工具栏支持手电筒与变焦；Material 风格 UI 与进入/淡出、工具栏自动隐藏、直播点脉冲等动画

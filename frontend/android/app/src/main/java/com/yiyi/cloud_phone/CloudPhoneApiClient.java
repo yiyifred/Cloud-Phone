@@ -103,6 +103,23 @@ final class CloudPhoneApiClient {
         return requestProtectedJson(context, host, port, path, "DELETE", null);
     }
 
+    static JSONObject changePassword(
+            Context context,
+            String host,
+            int port,
+            String currentPassword,
+            String nextPassword
+    ) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("currentPassword", currentPassword);
+        body.put("nextPassword", nextPassword);
+        return postProtectedJson(context, host, port, "/api/auth/change-password", body);
+    }
+
+    static void logout(Context context, String host, int port) throws Exception {
+        postProtectedJson(context, host, port, "/api/auth/logout", new JSONObject());
+    }
+
     private static JSONObject requestProtectedJson(
             Context context,
             String host,

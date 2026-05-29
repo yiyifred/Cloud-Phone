@@ -18,11 +18,18 @@ final class AuthApiClient {
         final boolean authenticated;
         final boolean passwordConfigured;
         final boolean requiresPasswordChange;
+        final String sessionExpiresAt;
 
-        SessionStatus(boolean authenticated, boolean passwordConfigured, boolean requiresPasswordChange) {
+        SessionStatus(
+                boolean authenticated,
+                boolean passwordConfigured,
+                boolean requiresPasswordChange,
+                String sessionExpiresAt
+        ) {
             this.authenticated = authenticated;
             this.passwordConfigured = passwordConfigured;
             this.requiresPasswordChange = requiresPasswordChange;
+            this.sessionExpiresAt = sessionExpiresAt;
         }
     }
 
@@ -53,10 +60,15 @@ final class AuthApiClient {
 
     SessionStatus fetchSession(String host, int port) throws Exception {
         JSONObject body = requestJson(host, port, "/api/auth/session", "GET", null);
+        String expiresAt = body.optString("sessionExpiresAt", "");
+        if (expiresAt.isEmpty() && !body.isNull("sessionExpiresAt")) {
+            expiresAt = String.valueOf(body.opt("sessionExpiresAt"));
+        }
         return new SessionStatus(
                 body.optBoolean("authenticated"),
                 body.optBoolean("passwordConfigured"),
-                body.optBoolean("requiresPasswordChange")
+                body.optBoolean("requiresPasswordChange"),
+                expiresAt.isEmpty() ? null : expiresAt
         );
     }
 

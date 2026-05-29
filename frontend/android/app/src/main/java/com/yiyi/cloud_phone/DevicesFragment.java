@@ -17,6 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.yiyi.cloud_phone.settings.RefreshIntervalStore;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -26,8 +28,6 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
     private static final String PREF_NAME = "cloud_phone_settings";
     private static final String KEY_SERVER_HOST = "server_host";
     private static final String KEY_SERVER_PORT = "server_port";
-    private static final long DEVICE_INTERVAL_MS = 1000L;
-    private static final long SCREENSHOT_INTERVAL_MS = 5000L;
 
     private final ExecutorService networkExecutor = Executors.newFixedThreadPool(2);
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -54,7 +54,7 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
             }
             refreshDevices(false);
             if (pollingActive && isAdded()) {
-                mainHandler.postDelayed(this, DEVICE_INTERVAL_MS);
+                mainHandler.postDelayed(this, deviceIntervalMs());
             }
         }
     };
@@ -69,7 +69,7 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
                 adapter.bumpScreenshotTick(screenshotTick);
             }
             if (pollingActive && isAdded()) {
-                mainHandler.postDelayed(this, SCREENSHOT_INTERVAL_MS);
+                mainHandler.postDelayed(this, screenshotIntervalMs());
             }
         }
     };
@@ -185,8 +185,16 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
         refreshDevices(true);
         mainHandler.removeCallbacks(devicePollRunnable);
         mainHandler.removeCallbacks(screenshotPollRunnable);
-        mainHandler.postDelayed(devicePollRunnable, DEVICE_INTERVAL_MS);
-        mainHandler.postDelayed(screenshotPollRunnable, SCREENSHOT_INTERVAL_MS);
+        mainHandler.postDelayed(devicePollRunnable, deviceIntervalMs());
+        mainHandler.postDelayed(screenshotPollRunnable, screenshotIntervalMs());
+    }
+
+    private long deviceIntervalMs() {
+        return RefreshIntervalStore.deviceIntervalMs(requireContext());
+    }
+
+    private long screenshotIntervalMs() {
+        return RefreshIntervalStore.screenshotIntervalMs(requireContext());
     }
 
     private void stopPolling() {

@@ -2,9 +2,9 @@
 
 # Cloud Phone
 
-**Manage real Android devices in the browser: cast, control, files, apps, and shell.**
+**Manage real Android devices in the browser: cast, control, files, apps, and shell — plus an Android companion app for the gallery and fullscreen cast on your phone.**
 
-Current version: **v0.12.12** · Node backend + Vue 3 frontend · scrcpy 4.0 WebSocket build
+Current version: **v0.12.13** · Node backend + Vue 3 web + Android app · scrcpy 4.0 WebSocket build
 
 [中文](README.md) · **English**
 
@@ -29,6 +29,7 @@ Current version: **v0.12.12** · Node backend + Vue 3 frontend · scrcpy 4.0 Web
 - [Highlights](#highlights)
 - [Screenshots](#screenshots)
 - [Features](#features)
+- [Android app](#android-app)
 - [Quick start](#quick-start)
 - [Project layout](#project-layout)
 - [API overview](#api-overview)
@@ -48,7 +49,7 @@ the Vue frontend decodes H.264 with **WebCodecs** and speaks the **ws-scrcpy** w
 
 Mirror settings panels follow grouping ideas from **escrcpy**, but this repo is standalone – it does not depend on escrcpy at runtime.
 
-**Good fit:** developers with USB/Wi‑Fi ADB, who want mirror options, files, apps, and shell in a single UI.  
+**Good fit:** developers with USB/Wi‑Fi ADB, who want mirror options, files, apps, and shell in a single web UI — or a phone-side gallery + fullscreen cast against the same backend.  
 **Not a fit:** “cloud phones” without ADB, or pure SaaS expectations.
 
 ---
@@ -65,6 +66,8 @@ Mirror settings panels follow grouping ideas from **escrcpy**, but this repo is 
 - **i18n**: switch UI language in Settings (zh-CN, en-US, zh-TW, ja-JP, ko-KR); core shell strings localized
 - **API security**: session cookie required; JSON payloads use AES-GCM after login; WebSocket upgrade requires session
 - **Device entry**: top-right Add Device modal; Android now supports USB guide + pairing-code flow (IP/port/code with auto connect-port scan), Huawei/Apple remain placeholders
+- **Android companion app**: same backend — device gallery, full Settings page, cast workspace, landscape fullscreen H.264 cast; stream params aligned with web
+- **Mobile cast UX**: mirror nav keys / camera torch & zoom; Material motion; auto-hiding chrome; touch mapping with letterboxing
 
 ---
 
@@ -109,14 +112,16 @@ Images are embedded in the corresponding feature sections below.
 - Online/offline counts, last refresh time, manual refresh
 - Click a card to open the **device workspace**
 
-### Settings & auth
+### Settings & auth (web)
 
-- Horizontal settings page with secondary nav: **Account** (session/password), **Appearance** (language/theme), **Refresh** (intervals)
-- **UI language**: Simplified Chinese, English, Traditional Chinese, Japanese, Korean (under Appearance, persisted locally)
-- Session login (default password `admin`, please change it); change password and session expiry under Account
-- Light/dark theme under Appearance with persisted preference
-- **Android app**: on first server setup, defaults to the LAN gateway (`.1` on the current subnet, e.g. `192.168.31.1`) on port `3000`; after connect, routes to first-time password setup or login like the web UI; saves the password encrypted on device for auto sign-in next launch; console UI uses bottom tabs for Devices and Settings; Devices tab mirrors the web mobile gallery (horizontal cards, auto refresh); add-device sheet supports USB watch, pairing code, and QR pairing like the web UI; UI icons use Community Material (aligned with web MDI); tap a device to open the workspace settings page with mirror/camera cast options in tabbed panels matching the web left panel (virtual display presets, `start_app`, aligned stream extras); tap **Start** for fullscreen live cast (H.264 decode, touch injection, mirror nav or camera torch/zoom toolbar, Material transitions and auto-hiding chrome, stream params aligned with web/desktop)
+- Horizontal settings page with secondary nav: **Account**, **Appearance**, **Refresh**
+- **Account**: password status (default / updated), session expiry, change password
+- **Appearance**: UI language (zh-CN, en-US, zh-TW, ja-JP, ko-KR), light/dark theme; stored in browser `localStorage`
+- **Refresh**: device list and screenshot poll intervals (1–120 s, defaults 1 s / 5 s); takes effect immediately after save
+- Session login (default password `admin`, please change it); AES-GCM on JSON APIs after login
 - **Backend local data**: `backend/node/data/` holds `auth.key` and `cloud-phone.db` on disk only—never commit this directory
+
+> **Note:** Files, app manager, and ADB terminal are **web workspace** features today. The Android app focuses on discovery, cast settings, and fullscreen remote control — see [Android app](#android-app).
 
 ### Device workspace · Mirror cast (default)
 
@@ -196,9 +201,84 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ---
 
+## Android app
+
+Source: `frontend/android/`. Uses the same Node backend and session model as the web UI — handy on the LAN for watching device screens and driving them fullscreen from a phone.
+
+### Connect & sign in
+
+- First launch: server **host** defaults to the LAN gateway (`.1` on the current subnet, e.g. `192.168.31.1`), **port** `3000`
+- Same flow as web: ping → forced password change while still `admin` → login; password stored encrypted for auto sign-in next time
+- Settings: **Log out** or **Change server** (clears session and saved password, returns to the connection screen)
+
+### Device gallery (bottom tab · Devices)
+
+- Horizontal cards with model, online state, and live screenshots (default ~5 s refresh, configurable in Settings)
+- Device list polls about every **1 s**; pull-to-refresh; keeps the previous screenshot frame to reduce flicker
+- **+** add device: USB guide, wireless **pairing code**, **QR** pairing (aligned with the web Add Device modal)
+- **Community Material** icons (Android-Iconics), consistent with web MDI
+
+### Settings (bottom tab · Settings)
+
+Mirrors the web `SettingsPanel` sections:
+
+| Section | Features |
+|---|---|
+| **Account** | Password status, session expiry, change password (bottom sheet), log out |
+| **Appearance** | UI locale preference (5 codes), light/dark theme (Material3 DayNight) |
+| **Refresh** | Device list / screenshot intervals (1–120 s); Devices tab polling picks up new values immediately |
+| **Server** | Current `host:port`, switch server and sign in again |
+
+### Device workspace
+
+- Tap a card: back, device name, **Start**
+- **Cast mode:** mirror (default) or camera (Android 12+)
+- **Tabbed parameters** (same shape as the web left panel, persisted per device serial):
+  - Mirror: video, audio, device, screen (virtual display presets, `__main__`/`__custom__`, suggested DPI, `start_app` package)
+  - Camera: camera, video, audio (`audioCode`, buffer fields, stream extras aligned with web)
+- Changes auto-save when you leave the page
+
+### Fullscreen cast
+
+- **Start** opens landscape fullscreen: `POST .../cast/start` + `WebSocket .../cast/ws`, **MediaCodec** H.264, letterboxed canvas with preview rotation
+- **Mirror:** recents / home / back / power / volume / rotate / stop; touch injection (scrcpy wire format)
+- **Camera:** torch, zoom out, zoom in, stop; no canvas touch injection
+- Chrome **auto-hides** (~3.5 s); tap video to toggle; enter/exit fades and live-status dot animation
+- Stream extras (`codecOptions`, virtual display, `audioDup` min SDK 33+, etc.) follow the **same rules** as web/desktop
+
+### Build & install
+
+**Requirements:** Android Studio or JDK 11+ and the Android SDK (`minSdk 28`).
+
+```powershell
+cd frontend/android
+.\gradlew :app:assembleDebug
+# Output: app/build/outputs/apk/debug/app-debug.apk
+```
+
+The phone must reach the backend on your LAN. Cleartext HTTP is allowed for local dev via `network_security_config`.
+
+### Web vs Android feature matrix
+
+| Capability | Web | Android app |
+|---|---|---|
+| Device gallery / screenshot polling | Yes | Yes |
+| Settings (account / appearance / refresh) | Yes | Yes |
+| Add device (USB / pair / QR) | Yes | Yes |
+| Cast settings workspace | Yes | Yes |
+| Fullscreen cast + touch / toolbar | Yes | Yes |
+| File explorer | Yes | — |
+| App manager | Yes | — |
+| ADB terminal | Yes | — |
+| Clipboard / record / browser screenshot download | Yes | — |
+
+---
+
 ## Quick start
 
-**Requirements:** Node.js 18+, authorized ADB device, Chromium-based browser with WebCodecs.
+**Requirements (web):** Node.js 18+, authorized ADB device, Chromium-based browser with WebCodecs.
+
+**Requirements (Android app):** same LAN as the backend; install the debug/release APK from `frontend/android` (see [Build & install](#build--install) under Android app).
 
 **Interactive installer (terminal UI):**
 
@@ -247,7 +327,8 @@ node tools/build-scrcpy-server.mjs
 scripts/               cross-platform install wizards (terminal UI)
 backend/node/          API + WebSocket
 backend/source/scrcpy/ scrcpy 4.0 + WebSocket fork
-frontend/web/          Vue 3 + Vite
+frontend/web/          Vue 3 + Vite (web console)
+frontend/android/      Android companion app
 tools/                 build & dev scripts
 images/qr/             sponsorship QR codes
 ```
