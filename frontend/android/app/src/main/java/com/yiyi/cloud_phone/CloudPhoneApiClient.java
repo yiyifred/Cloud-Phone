@@ -87,6 +87,22 @@ final class CloudPhoneApiClient {
         return java.util.Base64.getDecoder().decode(data);
     }
 
+    static JSONObject startDeviceCast(
+            Context context,
+            String host,
+            int port,
+            String serial,
+            JSONObject options
+    ) throws Exception {
+        String path = "/api/devices/" + Uri.encode(serial, StandardCharsets.UTF_8.name()) + "/cast/start";
+        return postProtectedJson(context, host, port, path, options);
+    }
+
+    static JSONObject stopDeviceCast(Context context, String host, int port, String serial) throws Exception {
+        String path = "/api/devices/" + Uri.encode(serial, StandardCharsets.UTF_8.name()) + "/cast/stop";
+        return requestProtectedJson(context, host, port, path, "DELETE", null);
+    }
+
     private static JSONObject requestProtectedJson(
             Context context,
             String host,

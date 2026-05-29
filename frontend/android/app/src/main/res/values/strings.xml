@@ -118,7 +118,22 @@
     <string name="server_saved_and_checking">地址已保存，正在检测...</string>
     <string name="workspace_cast_mode">投屏模式</string>
     <string name="workspace_start_cast">开始</string>
-    <string name="workspace_settings_hint">参数与 Web 控制台一致，修改后自动保存；投屏画面请在 Web 端打开设备工作区。</string>
+    <string name="workspace_settings_hint">参数与 Web 控制台一致，修改后自动保存；点击「开始」进入全屏投屏。</string>
     <string name="workspace_offline_hint">设备未在线，无法开始投屏。</string>
     <string name="workspace_settings_saved">投屏参数已保存</string>
+    <string name="cast_starting">正在启动 scrcpy 投屏…</string>
+    <string name="cast_connecting">正在连接视频流…</string>
+    <string name="cast_streaming">投屏中</string>
+    <string name="cast_disconnected">投屏连接已断开</string>
+    <string name="cast_stop">停止投屏</string>
+    <string name="cast_start_failed">投屏启动失败</string>
+    <string name="cast_unauthorized">会话已失效，请返回重新登录后再试</string>
+    <string name="cast_action_home">主屏幕</string>
+    <string name="cast_action_back">返回</string>
+    <string name="cast_action_recents">多任务</string>
+    <string name="cast_action_power">电源</string>
+    <string name="cast_action_volume_up">音量加</string>
+    <string name="cast_action_volume_down">音量减</string>
+    <string name="cast_action_rotate">旋转</string>
+    <string name="cast_action_stop">停止</string>
 </resources>

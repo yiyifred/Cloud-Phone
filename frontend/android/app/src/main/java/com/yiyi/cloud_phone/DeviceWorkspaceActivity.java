@@ -17,6 +17,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
+import com.yiyi.cloud_phone.cast.CastFullscreenActivity;
 import com.yiyi.cloud_phone.workspace.CastMode;
 import com.yiyi.cloud_phone.workspace.CastSettingsStore;
 import com.yiyi.cloud_phone.workspace.DeviceWorkspaceHost;
@@ -211,7 +212,7 @@ public class DeviceWorkspaceActivity extends AppCompatActivity implements Device
             Toast.makeText(this, R.string.workspace_offline_hint, Toast.LENGTH_SHORT).show();
             return;
         }
-        Toast.makeText(this, R.string.workspace_settings_saved, Toast.LENGTH_SHORT).show();
+        CastFullscreenActivity.open(this, deviceSerial, deviceDisplayName, deviceSdk, castMode);
     }
 
     @Override

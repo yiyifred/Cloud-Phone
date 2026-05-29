@@ -25,6 +25,12 @@
             android:exported="false"
             android:parentActivityName=".ConsoleActivity" />
         <activity
+            android:name=".cast.CastFullscreenActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/Theme.CloudPhone" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

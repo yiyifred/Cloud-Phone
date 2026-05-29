@@ -15,6 +15,7 @@ zxing = "3.5.3"
 iconics = "5.5.0"
 communityMaterial = "7.0.96.1-kotlin"
 viewpager2 = "1.1.0"
+okhttp = "4.12.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -33,6 +34,8 @@ iconics-core = { group = "com.mikepenz", name = "iconics-core", version.ref = "i
 iconics-views = { group = "com.mikepenz", name = "iconics-views", version.ref = "iconics" }
 community-material-typeface = { group = "com.mikepenz", name = "community-material-typeface", version.ref = "communityMaterial" }
 viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-jvm = { group = "com.squareup.okhttp3", name = "okhttp-urlconnection", version.ref = "okhttp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
