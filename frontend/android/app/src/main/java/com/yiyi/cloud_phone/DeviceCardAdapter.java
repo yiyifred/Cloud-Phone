@@ -15,6 +15,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 final class DeviceCardAdapter extends RecyclerView.Adapter<DeviceCardAdapter.Holder> {
+    interface DeviceClickListener {
+        void onDeviceClick(DeviceItem device);
+    }
+
     interface ScreenshotRequester {
         void requestScreenshot(String serial, long tick, ScreenshotCallback callback);
     }
@@ -27,12 +31,18 @@ final class DeviceCardAdapter extends RecyclerView.Adapter<DeviceCardAdapter.Hol
 
     private final Context context;
     private final ScreenshotRequester screenshotRequester;
+    private final DeviceClickListener deviceClickListener;
     private final List<DeviceItem> devices = new ArrayList<>();
     private long screenshotTick;
 
-    DeviceCardAdapter(Context context, ScreenshotRequester screenshotRequester) {
+    DeviceCardAdapter(
+            Context context,
+            ScreenshotRequester screenshotRequester,
+            DeviceClickListener deviceClickListener
+    ) {
         this.context = context.getApplicationContext();
         this.screenshotRequester = screenshotRequester;
+        this.deviceClickListener = deviceClickListener;
     }
 
     void submitList(List<DeviceItem> nextDevices) {
@@ -96,6 +106,13 @@ final class DeviceCardAdapter extends RecyclerView.Adapter<DeviceCardAdapter.Hol
             textSystem = itemView.findViewById(R.id.textSystem);
             textSerial = itemView.findViewById(R.id.textSerial);
             textAdbState = itemView.findViewById(R.id.textAdbState);
+            itemView.setOnClickListener(v -> {
+                int position = getBindingAdapterPosition();
+                if (position == RecyclerView.NO_POSITION || deviceClickListener == null) {
+                    return;
+                }
+                deviceClickListener.onDeviceClick(devices.get(position));
+            });
         }
 
         void bind(DeviceItem device, long tick) {

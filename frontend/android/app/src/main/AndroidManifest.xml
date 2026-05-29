@@ -21,6 +21,10 @@
             android:name=".ConsoleActivity"
             android:exported="false" />
         <activity
+            android:name=".DeviceWorkspaceActivity"
+            android:exported="false"
+            android:parentActivityName=".ConsoleActivity" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

@@ -116,4 +116,9 @@
     <string name="server_status_offline">服务器离线，请先配置地址</string>
     <string name="server_invalid_port">端口必须在 1-65535</string>
     <string name="server_saved_and_checking">地址已保存，正在检测...</string>
+    <string name="workspace_cast_mode">投屏模式</string>
+    <string name="workspace_start_cast">开始</string>
+    <string name="workspace_settings_hint">参数与 Web 控制台一致，修改后自动保存；投屏画面请在 Web 端打开设备工作区。</string>
+    <string name="workspace_offline_hint">设备未在线，无法开始投屏。</string>
+    <string name="workspace_settings_saved">投屏参数已保存</string>
 </resources>

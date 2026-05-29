@@ -90,7 +90,8 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
         recyclerDevices = view.findViewById(R.id.recyclerDevices);
         buttonAddDevice = view.findViewById(R.id.buttonAddDevice);
 
-        adapter = new DeviceCardAdapter(requireContext(), this);
+        adapter = new DeviceCardAdapter(requireContext(), this, device ->
+                DeviceWorkspaceActivity.open(requireContext(), device));
         recyclerDevices.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerDevices.setAdapter(adapter);
 

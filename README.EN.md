@@ -4,7 +4,7 @@
 
 **Manage real Android devices in the browser: cast, control, files, apps, and shell.**
 
-Current version: **v0.12.9** · Node backend + Vue 3 frontend · scrcpy 4.0 WebSocket build
+Current version: **v0.12.10** · Node backend + Vue 3 frontend · scrcpy 4.0 WebSocket build
 
 [中文](README.md) · **English**
 
@@ -115,7 +115,7 @@ Images are embedded in the corresponding feature sections below.
 - **UI language**: Simplified Chinese, English, Traditional Chinese, Japanese, Korean (under Appearance, persisted locally)
 - Session login (default password `admin`, please change it); change password and session expiry under Account
 - Light/dark theme under Appearance with persisted preference
-- **Android app**: on first server setup, defaults to the LAN gateway (`.1` on the current subnet, e.g. `192.168.31.1`) on port `3000`; after connect, routes to first-time password setup or login like the web UI; saves the password encrypted on device for auto sign-in next launch; console UI uses bottom tabs for Devices and Settings; Devices tab mirrors the web mobile gallery (horizontal cards, auto refresh); add-device sheet supports USB watch, pairing code, and QR pairing like the web UI; UI icons use Community Material (aligned with web MDI)
+- **Android app**: on first server setup, defaults to the LAN gateway (`.1` on the current subnet, e.g. `192.168.31.1`) on port `3000`; after connect, routes to first-time password setup or login like the web UI; saves the password encrypted on device for auto sign-in next launch; console UI uses bottom tabs for Devices and Settings; Devices tab mirrors the web mobile gallery (horizontal cards, auto refresh); add-device sheet supports USB watch, pairing code, and QR pairing like the web UI; UI icons use Community Material (aligned with web MDI); tap a device to open the workspace settings page with mirror/camera cast options in tabbed panels matching the web left panel
 - **Backend local data**: `backend/node/data/` holds `auth.key` and `cloud-phone.db` on disk only—never commit this directory
 
 ### Device workspace · Mirror cast (default)
