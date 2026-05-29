@@ -2,9 +2,10 @@ package com.yiyi.cloud_phone.cast;
 
 import android.animation.AnimatorInflater;
 import android.view.MotionEvent;
+import android.view.TextureView;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.view.View;
 
 import com.yiyi.cloud_phone.R;
 import com.yiyi.cloud_phone.workspace.CastMode;
@@ -22,14 +23,10 @@ final class CastInteractionController {
     private final TextureHolder textureHolder;
     private final CastWebSocketSession webSocketSession;
     private final CastFullscreenActivity.ToolbarHandler toolbarHandler;
-    private final CastChromeController chromeController;
-    private final View screenshotFlash;
     private boolean interactionEnabled = true;
     private int videoWidth;
     private int videoHeight;
     private int previewRotation;
-    private float touchDownX;
-    private float touchDownY;
     private boolean torchOn;
 
     interface TextureHolder {
@@ -45,17 +42,13 @@ final class CastInteractionController {
             CastMode castMode,
             TextureHolder textureHolder,
             CastWebSocketSession webSocketSession,
-            CastFullscreenActivity.ToolbarHandler toolbarHandler,
-            CastChromeController chromeController,
-            View screenshotFlash
+            CastFullscreenActivity.ToolbarHandler toolbarHandler
     ) {
         this.activity = activity;
         this.castMode = castMode;
         this.textureHolder = textureHolder;
         this.webSocketSession = webSocketSession;
         this.toolbarHandler = toolbarHandler;
-        this.chromeController = chromeController;
-        this.screenshotFlash = screenshotFlash;
     }
 
     void bind(LinearLayout toolbar) {
@@ -94,17 +87,11 @@ final class CastInteractionController {
     }
 
     private boolean handleTouch(View view, MotionEvent event) {
-        chromeController.onUserInteraction();
-        int action = event.getActionMasked();
-        if (action == MotionEvent.ACTION_DOWN) {
-            touchDownX = event.getX();
-            touchDownY = event.getY();
-        }
         if (!interactionEnabled || videoWidth <= 0 || videoHeight <= 0) {
             return true;
         }
         int motionAction;
-        switch (action) {
+        switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 motionAction = ScrcpyControlWire.MOTION_DOWN;
                 break;
@@ -118,11 +105,12 @@ final class CastInteractionController {
             default:
                 return true;
         }
-        CastTouchMapper.DevicePoint point = CastTouchMapper.mapToDevice(
-                event.getX(),
-                event.getY(),
-                textureHolder.getWidth(),
-                textureHolder.getHeight(),
+        if (!(view instanceof TextureView)) {
+            return true;
+        }
+        CastTouchMapper.DevicePoint point = CastTouchMapper.mapTouchEvent(
+                event,
+                (TextureView) view,
                 videoWidth,
                 videoHeight,
                 previewRotation
@@ -138,7 +126,6 @@ final class CastInteractionController {
     }
 
     private void onToolbarAction(String actionId) {
-        chromeController.onUserInteraction();
         if ("stop".equals(actionId)) {
             toolbarHandler.onStopRequested();
             return;

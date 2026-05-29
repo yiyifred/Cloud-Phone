@@ -157,10 +157,7 @@ public final class AnnexBH264Decoder {
                 break;
             }
             if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                MediaFormat format = codec.getOutputFormat();
-                int width = format.getInteger(MediaFormat.KEY_WIDTH);
-                int height = format.getInteger(MediaFormat.KEY_HEIGHT);
-                updateVideoSize(width, height);
+                updateVideoSizeFromFormat(codec.getOutputFormat());
                 continue;
             }
             if (outputIndex >= 0) {
@@ -213,6 +210,26 @@ public final class AnnexBH264Decoder {
             }
         }
         return null;
+    }
+
+    private void updateVideoSizeFromFormat(MediaFormat format) {
+        if (format == null) {
+            return;
+        }
+        int width = format.getInteger(MediaFormat.KEY_WIDTH);
+        int height = format.getInteger(MediaFormat.KEY_HEIGHT);
+        if (format.containsKey("crop-left")
+                && format.containsKey("crop-right")
+                && format.containsKey("crop-top")
+                && format.containsKey("crop-bottom")) {
+            int cropLeft = format.getInteger("crop-left");
+            int cropRight = format.getInteger("crop-right");
+            int cropTop = format.getInteger("crop-top");
+            int cropBottom = format.getInteger("crop-bottom");
+            width = cropRight - cropLeft + 1;
+            height = cropBottom - cropTop + 1;
+        }
+        updateVideoSize(width, height);
     }
 
     private void updateVideoSize(int width, int height) {

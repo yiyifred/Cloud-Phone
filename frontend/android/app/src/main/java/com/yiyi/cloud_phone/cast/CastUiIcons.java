@@ -89,6 +89,14 @@ final class CastUiIcons {
         return icon(context, iconKey, android.R.color.white, 22);
     }
 
+    static IconicsDrawable toolbarCollapse(android.content.Context context) {
+        return icon(context, "cmd_chevron_down", android.R.color.white, 22);
+    }
+
+    static IconicsDrawable toolbarExpand(android.content.Context context) {
+        return icon(context, "cmd_chevron_up", android.R.color.white, 22);
+    }
+
     private static IconicsDrawable icon(Context context, String iconKey, int colorRes, int sizeDp) {
         IconicsDrawable drawable = new IconicsDrawable(context, iconKey);
         drawable.setColorList(ColorStateList.valueOf(ContextCompat.getColor(context, colorRes)));

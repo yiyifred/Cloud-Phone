@@ -178,4 +178,6 @@
     <string name="cast_action_zoom_in">放大</string>
     <string name="cast_action_zoom_out">缩小</string>
     <string name="cast_action_stop">停止</string>
+    <string name="cast_toolbar_collapse">收起工具箱</string>
+    <string name="cast_toolbar_expand">展开工具箱</string>
 </resources>
