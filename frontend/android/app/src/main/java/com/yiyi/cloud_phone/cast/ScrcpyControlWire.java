@@ -74,6 +74,18 @@ public final class ScrcpyControlWire {
         return merged;
     }
 
+    public static byte[] cameraSetTorch(boolean on) {
+        return new byte[] { (byte) 18, (byte) (on ? 1 : 0) };
+    }
+
+    public static byte[] cameraZoomIn() {
+        return new byte[] { (byte) 19 };
+    }
+
+    public static byte[] cameraZoomOut() {
+        return new byte[] { (byte) 20 };
+    }
+
     public static byte[] setScreenPower(boolean on) {
         return new byte[] { (byte) TYPE_SET_SCREEN_POWER, (byte) (on ? POWER_MODE_NORMAL : POWER_MODE_OFF) };
     }

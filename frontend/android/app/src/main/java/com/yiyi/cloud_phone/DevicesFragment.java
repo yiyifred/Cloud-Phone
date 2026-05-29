@@ -49,8 +49,11 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
     private final Runnable devicePollRunnable = new Runnable() {
         @Override
         public void run() {
+            if (!isAdded()) {
+                return;
+            }
             refreshDevices(false);
-            if (pollingActive) {
+            if (pollingActive && isAdded()) {
                 mainHandler.postDelayed(this, DEVICE_INTERVAL_MS);
             }
         }
@@ -58,11 +61,14 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
     private final Runnable screenshotPollRunnable = new Runnable() {
         @Override
         public void run() {
+            if (!isAdded()) {
+                return;
+            }
             screenshotTick += 1L;
             if (adapter != null) {
                 adapter.bumpScreenshotTick(screenshotTick);
             }
-            if (pollingActive) {
+            if (pollingActive && isAdded()) {
                 mainHandler.postDelayed(this, SCREENSHOT_INTERVAL_MS);
             }
         }
@@ -122,6 +128,22 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
     public void onPause() {
         stopPolling();
         super.onPause();
+    }
+
+    @Override
+    public void onDestroyView() {
+        stopPolling();
+        mainHandler.removeCallbacksAndMessages(null);
+        swipeRefresh = null;
+        textLastRefresh = null;
+        textStatusPill = null;
+        textOfflineHint = null;
+        textError = null;
+        textEmpty = null;
+        recyclerDevices = null;
+        buttonAddDevice = null;
+        adapter = null;
+        super.onDestroyView();
     }
 
     @Override
@@ -186,22 +208,24 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
                         CloudPhoneApiClient.fetchDevices(appContext, endpoint.host, endpoint.port)
                 );
                 lastRefreshedAt = System.currentTimeMillis();
-                mainHandler.post(() -> {
+                runOnUiIfAlive(() -> {
                     displayedDevices.clear();
                     displayedDevices.addAll(devices);
-                    adapter.submitList(devices);
+                    if (adapter != null) {
+                        adapter.submitList(devices);
+                    }
                     updateHeader(displayedDevices, false, "");
                     finishRefreshing();
                 });
             } catch (Exception error) {
                 String message = error.getMessage();
                 if ("missing_session_key".equals(message)) {
-                    message = getString(R.string.devices_missing_session);
+                    message = appContext.getString(R.string.devices_missing_session);
                 } else if (message == null || message.isEmpty()) {
-                    message = getString(R.string.devices_load_failed);
+                    message = appContext.getString(R.string.devices_load_failed);
                 }
                 String finalMessage = message;
-                mainHandler.post(() -> {
+                runOnUiIfAlive(() -> {
                     updateHeader(displayedDevices, true, finalMessage);
                     finishRefreshing();
                 });
@@ -209,13 +233,28 @@ public class DevicesFragment extends Fragment implements DeviceCardAdapter.Scree
         });
     }
 
+    private void runOnUiIfAlive(Runnable action) {
+        mainHandler.post(() -> {
+            if (!isAdded() || getView() == null) {
+                return;
+            }
+            action.run();
+        });
+    }
+
     private void showSessionError() {
+        if (!isAdded() || textError == null) {
+            return;
+        }
         updateHeader(new ArrayList<>(), true, getString(R.string.devices_missing_session));
         textEmpty.setVisibility(View.GONE);
         recyclerDevices.setVisibility(View.GONE);
     }
 
     private void updateHeader(List<DeviceItem> devices, boolean hasError, String errorMessage) {
+        if (!isAdded() || textLastRefresh == null) {
+            return;
+        }
         String refreshLabel = DeviceFormatter.formatRefreshTime(lastRefreshedAt);
         if (refreshLabel.isEmpty()) {
             textLastRefresh.setText(getString(R.string.devices_refresh_never));

@@ -1,5 +1,6 @@
 package com.yiyi.cloud_phone.cast;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.SurfaceTexture;
@@ -9,6 +10,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,10 +36,6 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
     public static final String EXTRA_SDK = DeviceWorkspaceActivity.EXTRA_SDK;
     public static final String EXTRA_CAST_MODE = "cast_mode";
 
-    static final String[] TOOLBAR_ACTIONS = {
-            "recents", "home", "back", "power", "volume-down", "volume-up", "rotate", "stop"
-    };
-
     interface ToolbarHandler {
         void onStopRequested();
 
@@ -56,6 +54,8 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
     private View chromeLayer;
     private TextView errorText;
     private TextView statusText;
+    private View liveDot;
+    private View screenshotFlash;
     private FrameLayout rootLayout;
 
     private final AnnexBH264Decoder decoder = new AnnexBH264Decoder();
@@ -66,6 +66,7 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
     private byte[] pendingStreamParams;
     private boolean surfaceReady;
     private boolean backendActive;
+    private boolean streamReady;
     private int videoWidth;
     private int videoHeight;
     private int previewRotation;
@@ -82,7 +83,23 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
         intent.putExtra(EXTRA_DISPLAY_NAME, displayName);
         intent.putExtra(EXTRA_SDK, deviceSdk);
         intent.putExtra(EXTRA_CAST_MODE, mode.name());
-        context.startActivity(intent);
+        if (context instanceof Activity) {
+            CastMotion.openCast((Activity) context, intent);
+        } else {
+            context.startActivity(intent);
+        }
+    }
+
+    @Override
+    public View getChromeRoot() {
+        return chromeLayer;
+    }
+
+    @Override
+    public void setChromeVisible(boolean visible) {
+        if (chromeLayer != null) {
+            chromeLayer.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
     }
 
     @Override
@@ -96,13 +113,6 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
         loadSettings();
         setupDecoder();
         requestCastStart();
-    }
-
-    @Override
-    public void setChromeVisible(boolean visible) {
-        if (chromeLayer != null) {
-            chromeLayer.setVisibility(visible ? View.VISIBLE : View.GONE);
-        }
     }
 
     private void readExtras() {
@@ -128,10 +138,13 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
         chromeLayer = findViewById(R.id.castChrome);
         errorText = findViewById(R.id.castErrorText);
         statusText = findViewById(R.id.castStatusText);
+        liveDot = findViewById(R.id.castLiveDot);
+        screenshotFlash = findViewById(R.id.castScreenshotFlash);
         TextView deviceNameView = findViewById(R.id.castDeviceName);
         deviceNameView.setText(deviceDisplayName);
 
         chromeController = new CastChromeController(this);
+        textureView.setOnClickListener(v -> chromeController.toggleChrome());
 
         ImageButton exitButton = findViewById(R.id.castButtonExit);
         exitButton.setImageDrawable(CastUiIcons.back(this));
@@ -140,6 +153,7 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
 
         interactionController = new CastInteractionController(
                 this,
+                castMode,
                 new CastInteractionController.TextureHolder() {
                     @Override
                     public View getTouchTarget() {
@@ -170,7 +184,8 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
                         applyLetterbox();
                     }
                 },
-                chromeController
+                chromeController,
+                screenshotFlash
         );
         interactionController.bind(findViewById(R.id.castToolbar));
         interactionController.setInteractionEnabled(castMode != CastMode.CAMERA);
@@ -316,9 +331,14 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
     }
 
     private void onStreamReady() {
-        loadingOverlay.setVisibility(View.GONE);
+        if (streamReady) {
+            return;
+        }
+        streamReady = true;
+        CastMotion.fadeOut(loadingOverlay, null);
         updateStatus(R.string.cast_streaming);
         chromeController.setStreaming(true);
+        CastMotion.pulseLiveDot(liveDot);
     }
 
     private void applyLetterbox() {
@@ -363,7 +383,7 @@ public class CastFullscreenActivity extends AppCompatActivity implements CastChr
             );
             backendActive = false;
         }
-        finish();
+        CastMotion.closeCast(this);
     }
 
     @Override

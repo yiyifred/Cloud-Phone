@@ -1,5 +1,7 @@
 package com.yiyi.cloud_phone.workspace;
 
+import com.yiyi.cloud_phone.workspace.CastMirrorScreenUtils;
+
 import org.json.JSONObject;
 
 public class MirrorScreenSettingsFragment extends CastSettingsTabFragment {
@@ -17,21 +19,27 @@ public class MirrorScreenSettingsFragment extends CastSettingsTabFragment {
                 "创建独立虚拟屏并镜像其内容。",
                 CastOptionLists.newDisplayPresets(),
                 CastJson.text(screen, "newDisplaySelect", ""),
-                value -> applyNewDisplaySelect(screen, value)
+                value -> CastMirrorScreenUtils.applyNewDisplaySelect(screen, value)
         );
         form.addNumberField(
                 "虚拟屏宽度",
                 "像素。",
                 String.valueOf(CastJson.integer(screen, "newDisplayWidth", 1920)),
                 false,
-                value -> CastJson.putInt(screen, "newDisplayWidth", parseInt(value, 1920))
+                value -> {
+                    CastJson.putInt(screen, "newDisplayWidth", parseInt(value, 1920));
+                    CastMirrorScreenUtils.ensureSuggestedDpi(screen);
+                }
         );
         form.addNumberField(
                 "虚拟屏高度",
                 "像素。",
                 String.valueOf(CastJson.integer(screen, "newDisplayHeight", 1080)),
                 false,
-                value -> CastJson.putInt(screen, "newDisplayHeight", parseInt(value, 1080))
+                value -> {
+                    CastJson.putInt(screen, "newDisplayHeight", parseInt(value, 1080));
+                    CastMirrorScreenUtils.ensureSuggestedDpi(screen);
+                }
         );
         form.addNumberField(
                 "DPI",
@@ -44,7 +52,10 @@ public class MirrorScreenSettingsFragment extends CastSettingsTabFragment {
                 "手动设置 DPI",
                 "开启后不再自动建议 DPI。",
                 CastJson.bool(screen, "newDisplayDpiManual", false),
-                value -> CastJson.putBool(screen, "newDisplayDpiManual", value)
+                value -> {
+                    CastJson.putBool(screen, "newDisplayDpiManual", value);
+                    CastMirrorScreenUtils.ensureSuggestedDpi(screen);
+                }
         );
         form.addTextField(
                 "启动应用包名",
@@ -77,22 +88,6 @@ public class MirrorScreenSettingsFragment extends CastSettingsTabFragment {
                 CastJson.text(screen, "displayImePolicy", ""),
                 value -> CastJson.putText(screen, "displayImePolicy", value)
         );
-    }
-
-    private static void applyNewDisplaySelect(JSONObject screen, String value) {
-        CastJson.putText(screen, "newDisplaySelect", value);
-        CastJson.putBool(screen, "useNewDisplay", value != null && !value.isEmpty());
-        if (value != null && value.contains("x") && value.contains("/")) {
-            String[] parts = value.split("/");
-            String[] size = parts[0].split("x");
-            if (size.length == 2) {
-                CastJson.putInt(screen, "newDisplayWidth", parseInt(size[0], 1920));
-                CastJson.putInt(screen, "newDisplayHeight", parseInt(size[1], 1080));
-            }
-            if (parts.length > 1) {
-                CastJson.putInt(screen, "newDisplayDpi", parseInt(parts[1], 420));
-            }
-        }
     }
 
     private static int parseInt(String raw, int fallback) {

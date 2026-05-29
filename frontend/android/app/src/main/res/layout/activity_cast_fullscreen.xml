@@ -157,4 +157,13 @@
             android:text="@string/cast_stop" />
     </LinearLayout>
 
+    <View
+        android:id="@+id/castScreenshotFlash"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#D9FFFFFF"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone" />
+
 </FrameLayout>

@@ -118,15 +118,7 @@ final class CastOptionLists {
     }
 
     static List<Option> newDisplayPresets() {
-        List<Option> items = new ArrayList<>();
-        items.add(new Option("", "关闭（使用 display-id）"));
-        items.add(new Option("__main__", "主屏尺寸与密度"));
-        items.add(new Option("__custom__", "自定义分辨率 / DPI"));
-        items.add(new Option("1280x720/160", "HD 1280×720/160"));
-        items.add(new Option("1920x1080/160", "FHD 1920×1080/160"));
-        items.add(new Option("2560x1440/160", "QHD 2560×1440/160"));
-        items.add(new Option("3840x2160/160", "4K 3840×2160/160"));
-        return items;
+        return CastNewDisplayPresets.all();
     }
 
     static List<Option> imePolicies() {

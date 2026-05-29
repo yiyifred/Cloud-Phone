@@ -1,12 +1,14 @@
 package com.yiyi.cloud_phone.cast;
 
+import com.yiyi.cloud_phone.workspace.CastMirrorScreenUtils;
+
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
 final class CastStreamExtras {
-    private static final int ANDROID_SDK_AUDIO_DUP_MIN = 30;
+    private static final int ANDROID_SDK_AUDIO_DUP_MIN = 33;
 
     private CastStreamExtras() {
     }
@@ -49,10 +51,28 @@ final class CastStreamExtras {
             return;
         }
 
-        int deviceSdk = mirror.optInt("deviceSdk", 0);
-        String source = audio.optString("source", "output").trim();
+        appendResolvedAudio(parts, audio, mirror.optInt("deviceSdk", 0), "output");
+    }
+
+    private static void appendCameraAudio(List<String> parts, JSONObject mirror) {
+        JSONObject audio = mirror.optJSONObject("audio");
+        if (audio == null || audio.optBoolean("disabled", false)) {
+            parts.add("audio=false");
+            return;
+        }
+        parts.add("audio=true");
+        appendResolvedAudio(parts, audio, mirror.optInt("deviceSdk", 0), "mic");
+    }
+
+    private static void appendResolvedAudio(
+            List<String> parts,
+            JSONObject audio,
+            int deviceSdk,
+            String defaultSource
+    ) {
+        String source = audio.optString("source", defaultSource).trim();
         if (source.isEmpty()) {
-            source = "output";
+            source = defaultSource;
         }
         boolean audioDup = audio.optBoolean("audioDup", false);
         if (audioDup) {
@@ -63,7 +83,7 @@ final class CastStreamExtras {
             }
         }
         if ("playback".equals(source) && deviceSdk > 0 && deviceSdk < ANDROID_SDK_AUDIO_DUP_MIN) {
-            source = "output";
+            source = "output".equals(defaultSource) ? "output" : "mic";
         }
         if (!source.isEmpty()) {
             parts.add("audio_source=" + source);
@@ -75,6 +95,9 @@ final class CastStreamExtras {
             parts.add("audio_bit_rate=" + (bitRateKbps * 1000));
         }
         String codec = audio.optString("codec", "opus").trim().toLowerCase();
+        if (codec.isEmpty()) {
+            codec = audio.optString("audioCode", "opus").trim().toLowerCase();
+        }
         if (!codec.isEmpty()) {
             parts.add("audio_codec=" + codec);
         }
@@ -129,8 +152,9 @@ final class CastStreamExtras {
         if (screen == null) {
             return;
         }
-        if (isNewDisplayEnabled(screen)) {
-            parts.add("new_display=" + formatNewDisplayExtra(screen));
+        if (CastMirrorScreenUtils.isNewDisplayEnabled(screen)) {
+            String extra = CastMirrorScreenUtils.formatNewDisplayExtra(screen);
+            parts.add("new_display=" + extra);
         } else {
             String displayId = screen.optString("displayId", "").trim();
             if (!displayId.isEmpty()) {
@@ -154,39 +178,9 @@ final class CastStreamExtras {
         if (!imePolicy.isEmpty()) {
             parts.add("display_ime_policy=" + imePolicy);
         }
-    }
-
-    private static void appendCameraAudio(List<String> parts, JSONObject mirror) {
-        JSONObject audio = mirror.optJSONObject("audio");
-        if (audio == null || audio.optBoolean("disabled", false)) {
-            parts.add("audio=false");
-            return;
-        }
-        parts.add("audio=true");
-        int deviceSdk = mirror.optInt("deviceSdk", 0);
-        String source = audio.optString("source", "mic").trim();
-        if (source.isEmpty()) {
-            source = "mic";
-        }
-        boolean audioDup = audio.optBoolean("audioDup", false);
-        if (audioDup && deviceSdk > 0 && deviceSdk < ANDROID_SDK_AUDIO_DUP_MIN) {
-            audioDup = false;
-        }
-        if (!source.isEmpty()) {
-            parts.add("audio_source=" + source);
-        }
-        parts.add("audio_dup=" + audioDup);
-        int bitRateKbps = audio.optInt("bitRateKbps", 128);
-        if (bitRateKbps > 0) {
-            parts.add("audio_bit_rate=" + (bitRateKbps * 1000));
-        }
-        String codec = audio.optString("codec", "opus").trim().toLowerCase();
-        if (!codec.isEmpty()) {
-            parts.add("audio_codec=" + codec);
-        }
-        String encoder = audio.optString("encoder", "").trim();
-        if (!encoder.isEmpty()) {
-            parts.add("audio_encoder=" + encoder);
+        String startApp = CastMirrorScreenUtils.resolveStartAppPackage(screen);
+        if (!startApp.isEmpty()) {
+            parts.add("start_app=" + startApp);
         }
     }
 
@@ -234,34 +228,6 @@ final class CastStreamExtras {
             return "0";
         }
         return "@" + value;
-    }
-
-    private static boolean isNewDisplayEnabled(JSONObject screen) {
-        if (screen.optBoolean("useNewDisplay", false)) {
-            return true;
-        }
-        String select = screen.optString("newDisplaySelect", "").trim();
-        return !select.isEmpty() && !"off".equals(select);
-    }
-
-    private static String formatNewDisplayExtra(JSONObject screen) {
-        String select = screen.optString("newDisplaySelect", "").trim();
-        if ("main".equals(select) || select.isEmpty()) {
-            return "";
-        }
-        if ("custom".equals(select)) {
-            int width = screen.optInt("newDisplayWidth", 1920);
-            int height = screen.optInt("newDisplayHeight", 1080);
-            int dpi = screen.optInt("newDisplayDpi", 420);
-            return width + "x" + height + "/" + dpi;
-        }
-        if (select.contains("x") && select.contains("/")) {
-            return select;
-        }
-        int width = screen.optInt("newDisplayWidth", 1920);
-        int height = screen.optInt("newDisplayHeight", 1080);
-        int dpi = screen.optInt("newDisplayDpi", 420);
-        return width + "x" + height + "/" + dpi;
     }
 
     private static String join(List<String> parts) {

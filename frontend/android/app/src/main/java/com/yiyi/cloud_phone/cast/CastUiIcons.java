@@ -33,6 +33,12 @@ final class CastUiIcons {
                 return context.getString(R.string.cast_action_volume_down);
             case "rotate":
                 return context.getString(R.string.cast_action_rotate);
+            case "torch":
+                return context.getString(R.string.cast_action_torch);
+            case "zoom-in":
+                return context.getString(R.string.cast_action_zoom_in);
+            case "zoom-out":
+                return context.getString(R.string.cast_action_zoom_out);
             case "stop":
                 return context.getString(R.string.cast_action_stop);
             default:
@@ -63,6 +69,15 @@ final class CastUiIcons {
                 break;
             case "rotate":
                 iconKey = "cmd_rotate_right";
+                break;
+            case "torch":
+                iconKey = "cmd_flashlight";
+                break;
+            case "zoom-in":
+                iconKey = "cmd_magnify_plus";
+                break;
+            case "zoom-out":
+                iconKey = "cmd_magnify_minus";
                 break;
             case "stop":
                 iconKey = "cmd_stop";

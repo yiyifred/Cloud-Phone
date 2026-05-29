@@ -6,6 +6,9 @@ public class CameraAudioSettingsFragment extends CastSettingsTabFragment {
     @Override
     protected void buildForm(CastFormBuilder form) {
         JSONObject audio = CastJson.section(host.getCameraSettings(), "audio");
+        int sdk = host.getDeviceSdk();
+        boolean audioDupSupported = sdk <= 0 || sdk >= 33;
+
         form.addSwitch(
                 "禁用音频",
                 "关闭后仅传输视频。",
@@ -23,8 +26,11 @@ public class CameraAudioSettingsFragment extends CastSettingsTabFragment {
                 "音频编码",
                 "对应 --audio-code。",
                 CastOptionLists.audioCodes(),
-                CastJson.text(audio, "codec", "opus"),
-                value -> CastJson.putText(audio, "codec", value)
+                CastJson.text(audio, "audioCode", CastJson.text(audio, "codec", "opus")),
+                value -> {
+                    CastJson.putText(audio, "audioCode", value);
+                    CastJson.putText(audio, "codec", value);
+                }
         );
         form.addSpinner(
                 "比特率",
@@ -35,9 +41,25 @@ public class CameraAudioSettingsFragment extends CastSettingsTabFragment {
         );
         form.addSwitch(
                 "音频复制到设备",
-                "需 Android 13+ 与 playback 源。",
+                audioDupSupported
+                        ? "开启后手机与浏览器同时出声，需 Android 13+。"
+                        : "本机 SDK 较低，仅浏览器播放。",
                 CastJson.bool(audio, "audioDup", false),
                 value -> CastJson.putBool(audio, "audioDup", value)
+        );
+        form.addNumberField(
+                "缓冲 (ms)",
+                "Web 投屏当前忽略，仅保留配置项。",
+                String.valueOf(CastJson.integer(audio, "bufferMs", 0)),
+                false,
+                value -> CastJson.putInt(audio, "bufferMs", parseInt(value, 0))
+        );
+        form.addNumberField(
+                "输出缓冲 (ms)",
+                "Web 投屏当前忽略。",
+                String.valueOf(CastJson.integer(audio, "outputBufferMs", 0)),
+                false,
+                value -> CastJson.putInt(audio, "outputBufferMs", parseInt(value, 0))
         );
     }
 

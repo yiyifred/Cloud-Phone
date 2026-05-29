@@ -7,6 +7,8 @@ import android.view.View;
 final class CastChromeController {
     interface Host {
         void setChromeVisible(boolean visible);
+
+        View getChromeRoot();
     }
 
     private static final long AUTO_HIDE_MS = 3500L;
@@ -62,7 +64,16 @@ final class CastChromeController {
 
     private void setChromeVisible(boolean visible) {
         chromeVisible = visible;
-        host.setChromeVisible(visible);
+        View root = host.getChromeRoot();
+        if (root == null) {
+            host.setChromeVisible(visible);
+            return;
+        }
+        if (visible) {
+            CastMotion.fadeIn(root);
+        } else {
+            CastMotion.fadeOut(root, null);
+        }
     }
 
     void release() {

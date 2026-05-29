@@ -135,5 +135,8 @@
     <string name="cast_action_volume_up">音量加</string>
     <string name="cast_action_volume_down">音量减</string>
     <string name="cast_action_rotate">旋转</string>
+    <string name="cast_action_torch">手电筒</string>
+    <string name="cast_action_zoom_in">放大</string>
+    <string name="cast_action_zoom_out">缩小</string>
     <string name="cast_action_stop">停止</string>
 </resources>
