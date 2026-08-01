@@ -4,6 +4,20 @@ import { NEW_DISPLAY_CUSTOM } from "../utils/mirror-screen-constants.js";
 import { resolveVdFromContent, resolveVdSize } from "./multi-app-window-layout.js";
 import { suggestDpi } from "./mirror-cast-constants.js";
 
+/** Topmost (focused, visible) multi-app window. */
+export const MULTI_APP_FOCUSED_MAX_FPS = 60;
+/** Non-top multi-app windows (background / minimized). */
+export const MULTI_APP_BACKGROUND_MAX_FPS = 30;
+
+/**
+ * @param {{ focused?: boolean, minimized?: boolean }} state
+ */
+export function resolveMultiAppMaxFps(state = {}) {
+  return state.focused && !state.minimized
+    ? MULTI_APP_FOCUSED_MAX_FPS
+    : MULTI_APP_BACKGROUND_MAX_FPS;
+}
+
 /**
  * Build cast options equivalent to official scrcpy:
  *   scrcpy --new-display=<W>x<H>/<dpi> --start-app=<pkg> --flex-display
@@ -19,6 +33,7 @@ import { suggestDpi } from "./mirror-cast-constants.js";
  *   packageName?: string,
  *   deviceSdk?: number,
  *   orientation?: "portrait" | "landscape",
+ *   maxFps?: number,
  * }} opts
  */
 export function buildMultiAppCastOptions(opts) {
@@ -32,6 +47,10 @@ export function buildMultiAppCastOptions(opts) {
     Math.min(640, Math.round(Number(opts.dpi) || suggestDpi(width, height))),
   );
   const packageName = String(opts.packageName || "").trim();
+  const maxFps = Math.max(
+    1,
+    Math.round(Number(opts.maxFps) || MULTI_APP_FOCUSED_MAX_FPS),
+  );
 
   // --new-display=WxH/dpi
   settings.screen.useNewDisplay = true;
@@ -47,7 +66,7 @@ export function buildMultiAppCastOptions(opts) {
   settings.screen.noVdSystemDecorations = true;
   settings.screen.noVdDestroyContent = true;
   // Official server defaults (not mirror UI 5Mbps)
-  settings.video.maxFps = 60;
+  settings.video.maxFps = maxFps;
   settings.video.bitRateMbps = 8;
   settings.video.iFrameInterval = 10;
   settings.video.resolution = "1080p";

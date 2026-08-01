@@ -12,6 +12,7 @@ import com.yiyi.cloud_phone.R;
 import com.yiyi.cloud_phone.cast.CastSessionController;
 import com.yiyi.cloud_phone.cast.MultiAppWindowCastSession;
 import com.yiyi.cloud_phone.settings.ServerEndpointStore;
+import com.yiyi.cloud_phone.workspace.MultiAppCastOptions;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -144,6 +145,7 @@ final class MultiAppDesktopController implements MultiAppWindowManager.Listener,
                 bundle.resizeScheduler.schedule(win.contentWidth(), win.contentHeight());
             }
         }
+        syncWindowMaxFps();
     }
 
     @Override
@@ -159,6 +161,20 @@ final class MultiAppDesktopController implements MultiAppWindowManager.Listener,
             }
         }
         taskbar.rebuild(windowManager);
+        syncWindowMaxFps();
+    }
+
+    /** Topmost focused window → 60fps; others → 30fps. */
+    private void syncWindowMaxFps() {
+        String focused = windowManager.focusedId();
+        for (MultiAppWindowState win : windowManager.windows()) {
+            WindowBundle bundle = bundles.get(win.id);
+            if (bundle == null || bundle.cast == null) {
+                continue;
+            }
+            boolean top = win.id.equals(focused) && !win.minimized;
+            bundle.cast.applyMaxFps(MultiAppCastOptions.resolveMaxFps(top, win.minimized));
+        }
     }
 
     @Override
@@ -360,6 +376,7 @@ final class MultiAppDesktopController implements MultiAppWindowManager.Listener,
                 bundle.resizeScheduler.markCastReady(win.vdWidth, win.vdHeight);
                 bundle.exitWatch.bumpGrace(10_000L);
                 bundle.exitWatch.setEnabled(true);
+                syncWindowMaxFps();
             }
 
             @Override
@@ -387,7 +404,8 @@ final class MultiAppDesktopController implements MultiAppWindowManager.Listener,
         MultiAppWindowFrameBinder.setupTouch(frame.findViewById(R.id.windowContent), bundle.cast);
         bundles.put(win.id, bundle);
         bundle.exitWatch.bumpGrace(12_000L);
-        bundle.cast.start(win);
+        boolean top = win.id.equals(windowManager.focusedId()) && !win.minimized;
+        bundle.cast.start(win, MultiAppCastOptions.resolveMaxFps(top, win.minimized));
     }
 
     private void closeWindow(String id, boolean stopApp) {

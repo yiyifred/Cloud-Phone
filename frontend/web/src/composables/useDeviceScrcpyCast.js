@@ -643,6 +643,27 @@ export function useDeviceScrcpyCast(
     onControlSent?.(buffer);
   }
 
+  /** Re-send type-101 from current castOptions (e.g. maxFps change). */
+  function resendStreamParameters(reason = "options-update") {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+    try {
+      const body = serializeChangeStreamParameters(
+        videoSettingsFromCastOptions(unref(castOptionsRef) ?? {}, sessionMeta.value),
+      );
+      const copy = new Uint8Array(body.byteLength);
+      copy.set(body);
+      sendControl(copy);
+      return true;
+    } catch (error) {
+      appendStartupLog(
+        `流参数重发失败 (${reason}): ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return false;
+    }
+  }
+
   function sendInjectText(text) {
     const value = String(text ?? "");
 
@@ -829,6 +850,7 @@ export function useDeviceScrcpyCast(
     resumeCastAudio,
     sendCameraControl,
     sendControl,
+    resendStreamParameters,
     sendInjectText,
     pasteClipboardToDevice,
     copyClipboardFromDevice,

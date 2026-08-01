@@ -52,6 +52,8 @@ public final class MultiAppWindowCastSession {
     private int reconnectAttempts;
     private boolean vdErrorShown;
     private Runnable reconnectRunnable;
+    private int targetMaxFps = MultiAppCastOptions.FOCUSED_MAX_FPS;
+    private int appliedMaxFps = -1;
 
     public MultiAppWindowCastSession(Context context, String serial, int deviceSdk) {
         this.context = context.getApplicationContext();
@@ -79,6 +81,9 @@ public final class MultiAppWindowCastSession {
             public void onFrameRendered() {
                 mainHandler.post(() -> {
                     ready = true;
+                    if (appliedMaxFps < 0) {
+                        appliedMaxFps = targetMaxFps;
+                    }
                     if (callback != null) {
                         callback.onReady();
                     }
@@ -116,11 +121,36 @@ public final class MultiAppWindowCastSession {
     }
 
     public void start(MultiAppWindowState win) {
+        start(win, MultiAppCastOptions.FOCUSED_MAX_FPS);
+    }
+
+    public void start(MultiAppWindowState win, int maxFps) {
         if (started && window != null && window.id.equals(win.id)) {
+            applyMaxFps(maxFps);
             return;
         }
         window = win;
+        targetMaxFps = Math.max(1, maxFps);
+        appliedMaxFps = -1;
         startInternal(false);
+    }
+
+    public void applyMaxFps(int maxFps) {
+        int next = Math.max(1, maxFps);
+        targetMaxFps = next;
+        if (!ready || window == null || appliedMaxFps == next) {
+            return;
+        }
+        try {
+            MultiAppWindowState win = window;
+            byte[] params = MultiAppCastOptions.buildStreamParams(
+                    win.packageName, win.vdWidth, win.vdHeight, win.vdDpi, deviceSdk, next
+            );
+            webSocketSession.sendControl(params);
+            appliedMaxFps = next;
+        } catch (Exception ignored) {
+            // keep previous appliedMaxFps; retry on next focus sync
+        }
     }
 
     public void restart(boolean keepBackend) {
@@ -171,15 +201,16 @@ public final class MultiAppWindowCastSession {
         Thread worker = new Thread(() -> {
             try {
                 MultiAppWindowState win = window;
+                int maxFps = Math.max(1, targetMaxFps);
                 byte[] streamParams = MultiAppCastOptions.buildStreamParams(
-                        win.packageName, win.vdWidth, win.vdHeight, win.vdDpi, deviceSdk
+                        win.packageName, win.vdWidth, win.vdHeight, win.vdDpi, deviceSdk, maxFps
                 );
                 JSONObject payload;
                 if (keepBackend && backendHeld && backendPayload != null && backendPayload.optBoolean("success", false)) {
                     payload = backendPayload;
                 } else {
                     JSONObject mirrorPayload = MultiAppCastOptions.buildPayload(
-                            win.packageName, win.vdWidth, win.vdHeight, win.vdDpi, deviceSdk
+                            win.packageName, win.vdWidth, win.vdHeight, win.vdDpi, deviceSdk, maxFps
                     );
                     JSONObject session = DeviceCastApi.startCast(
                             context,
@@ -209,6 +240,7 @@ public final class MultiAppWindowCastSession {
         webSocketSession.close();
         started = false;
         ready = false;
+        appliedMaxFps = -1;
         pendingStreamParams = null;
         if (releaseBackend && backendHeld) {
             backendHeld = false;

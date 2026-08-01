@@ -241,6 +241,7 @@ watch(
           :ref="(el) => setStreamRef(win.id, el)"
           :device="device"
           :window="win"
+          :focused="focusedId === win.id"
           :content-width="contentSize(win).width"
           :content-height="contentSize(win).height"
           @close-window="handleClose(win.id)"

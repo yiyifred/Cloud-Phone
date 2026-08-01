@@ -11,6 +11,7 @@ import {
 } from "../../utils/cast-error-message.js";
 import {
   buildMultiAppCastOptions,
+  resolveMultiAppMaxFps,
   vdOptionsFromContent,
 } from "../../utils/multi-app-cast-options.js";
 import { withTimeout } from "../../utils/with-timeout.js";
@@ -20,6 +21,7 @@ const props = defineProps({
   window: { type: Object, required: true },
   contentWidth: { type: Number, required: true },
   contentHeight: { type: Number, required: true },
+  focused: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["close-window", "switch-mirror"]);
@@ -27,6 +29,15 @@ const emit = defineEmits(["close-window", "switch-mirror"]);
 const canvasRef = ref(null);
 const viewportRef = ref(null);
 const rotatorRef = ref(null);
+/** @type {number | null} */
+let appliedMaxFps = null;
+
+function currentMaxFps() {
+  return resolveMultiAppMaxFps({
+    focused: props.focused,
+    minimized: Boolean(props.window?.minimized),
+  });
+}
 
 function buildOptionsFromWindow() {
   const vd = vdOptionsFromContent(props.contentWidth, props.contentHeight);
@@ -38,6 +49,7 @@ function buildOptionsFromWindow() {
     packageName: win.packageName,
     deviceSdk: props.device?.sdkVersion,
     orientation: win.orientation,
+    maxFps: currentMaxFps(),
   });
 }
 
@@ -131,6 +143,7 @@ async function startWindowCast({ force = false, keepBackend = false } = {}) {
   errorMessage.value = "";
   showVdError.value = false;
   ready.value = false;
+  appliedMaxFps = null;
   exitWatch.bumpGrace(12_000);
   castOptions.value = buildOptionsFromWindow();
 
@@ -163,6 +176,7 @@ async function startWindowCast({ force = false, keepBackend = false } = {}) {
 
     await cast.beginCast(payload);
     ready.value = true;
+    appliedMaxFps = currentMaxFps();
     reconnectAttempts = 0;
     lastSentVd = {
       width: Number(props.window?.vdWidth) || 0,
@@ -271,6 +285,48 @@ async function stopWindowCast({ releaseBackend = true } = {}) {
 }
 
 watch(() => [props.contentWidth, props.contentHeight], () => scheduleResize());
+
+watch(
+  () => [props.focused, props.window?.minimized],
+  () => {
+    applyMaxFpsNow();
+  },
+);
+
+/**
+ * Top window → 60fps; others → 30fps. Keep VD size in options so type-101
+ * does not restart capture with a stale new_display size after resize.
+ */
+function applyMaxFpsNow() {
+  if (unmounted || !started || !ready.value) {
+    return;
+  }
+  const maxFps = currentMaxFps();
+  if (appliedMaxFps === maxFps) {
+    return;
+  }
+  const win = props.window || {};
+  const opts = castOptions.value;
+  if (!opts?.mirror?.video) {
+    return;
+  }
+  castOptions.value = {
+    ...opts,
+    mirror: {
+      ...opts.mirror,
+      video: { ...opts.mirror.video, maxFps },
+      screen: {
+        ...opts.mirror.screen,
+        newDisplayWidth: win.vdWidth || opts.mirror.screen?.newDisplayWidth,
+        newDisplayHeight: win.vdHeight || opts.mirror.screen?.newDisplayHeight,
+        newDisplayDpi: win.vdDpi || opts.mirror.screen?.newDisplayDpi,
+      },
+    },
+  };
+  if (cast.resendStreamParameters?.("max-fps")) {
+    appliedMaxFps = maxFps;
+  }
+}
 
 watch(
   () => props.window.packageName,
