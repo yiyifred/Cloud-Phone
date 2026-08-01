@@ -78,10 +78,10 @@ final class MultiAppWindowFrameBinder {
     }
 
     private static void bindChrome(View frame, MultiAppWindowState win, Host host) {
-        frame.findViewById(R.id.buttonWindowBack).setOnClickListener(v -> host.onBack(win.id));
-        frame.findViewById(R.id.buttonWindowMinimize).setOnClickListener(v -> host.onMinimize(win.id));
-        frame.findViewById(R.id.buttonWindowMaximize).setOnClickListener(v -> host.onMaximize(win.id));
-        frame.findViewById(R.id.buttonWindowClose).setOnClickListener(v -> host.onClose(win.id));
+        bindChromeButton(frame.findViewById(R.id.buttonWindowBack), () -> host.onBack(win.id));
+        bindChromeButton(frame.findViewById(R.id.buttonWindowMinimize), () -> host.onMinimize(win.id));
+        bindChromeButton(frame.findViewById(R.id.buttonWindowMaximize), () -> host.onMaximize(win.id));
+        bindChromeButton(frame.findViewById(R.id.buttonWindowClose), () -> host.onClose(win.id));
         View titleBar = frame.findViewById(R.id.windowTitleBar);
         titleBar.setOnTouchListener(new MultiAppTitleDragListener(win, new MultiAppTitleDragListener.Host() {
             @Override
@@ -108,6 +108,29 @@ final class MultiAppWindowFrameBinder {
         bindResizeEdge(frame, win, host, R.id.resizeSE, "se");
         bindResizeEdge(frame, win, host, R.id.resizeSW, "sw");
         frame.setOnClickListener(v -> host.onFocus(win.id));
+    }
+
+    /**
+     * Consume all touches on chrome buttons so the title-bar double-tap
+     * maximize gesture never fires when double-tapping Back / Min / Max / Close.
+     */
+    private static void bindChromeButton(View button, Runnable action) {
+        if (button == null) {
+            return;
+        }
+        button.setOnTouchListener((v, event) -> {
+            int actionMasked = event.getActionMasked();
+            if (actionMasked == MotionEvent.ACTION_UP) {
+                float x = event.getX();
+                float y = event.getY();
+                if (x >= 0 && y >= 0 && x < v.getWidth() && y < v.getHeight()) {
+                    action.run();
+                }
+            }
+            return true;
+        });
+        button.setOnClickListener(null);
+        button.setClickable(true);
     }
 
     private static void setResizeEdgesVisible(View frame, boolean visible) {

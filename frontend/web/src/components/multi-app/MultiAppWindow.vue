@@ -166,6 +166,7 @@ onBeforeUnmount(() => {
           title="返回"
           @pointerdown.stop
           @click.stop="emit('back')"
+          @dblclick.stop
         >
           <Icon icon="lucide:arrow-left" :width="16" :height="16" />
         </button>
@@ -182,6 +183,7 @@ onBeforeUnmount(() => {
           title="最小化"
           @pointerdown.stop
           @click.stop="emit('minimize')"
+          @dblclick.stop
         >
           <Icon icon="lucide:minus" :width="14" :height="14" />
         </button>
@@ -191,6 +193,7 @@ onBeforeUnmount(() => {
           :title="window.maximized ? '向下还原' : '最大化'"
           @pointerdown.stop
           @click.stop="emit('maximize')"
+          @dblclick.stop
         >
           <Icon
             :icon="window.maximized ? 'lucide:copy' : 'lucide:square'"
@@ -204,6 +207,7 @@ onBeforeUnmount(() => {
           title="关闭"
           @pointerdown.stop
           @click.stop="emit('close')"
+          @dblclick.stop
         >
           <Icon icon="lucide:x" :width="14" :height="14" />
         </button>
