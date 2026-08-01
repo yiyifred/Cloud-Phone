@@ -171,6 +171,13 @@ public final class MultiAppWindowCastSession {
         webSocketSession.sendControl(payload);
     }
 
+    public void sendStartApp(String packageName) {
+        byte[] payload = ScrcpyControlWire.startApp(packageName);
+        if (payload != null) {
+            webSocketSession.sendControl(payload);
+        }
+    }
+
     public void sendTouch(int action, float x, float y, int viewW, int viewH) {
         if (videoWidth <= 0 || videoHeight <= 0 || viewW <= 0 || viewH <= 0) {
             return;

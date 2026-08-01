@@ -24,7 +24,7 @@ const props = defineProps({
   focused: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["close-window", "switch-mirror"]);
+const emit = defineEmits(["close-window", "switch-mirror", "app-exited"]);
 
 const canvasRef = ref(null);
 const viewportRef = ref(null);
@@ -89,9 +89,19 @@ const exitWatch = useAppExitWatch({
   getSerial: () => String(props.device?.serial || ""),
   getPackageName: () => String(props.window?.packageName || ""),
   enabled: () => Boolean(ready.value && started && !showVdError.value && !starting.value),
-  onExit: () => emit("close-window"),
+  onExit: () => emit("app-exited"),
+  onOffVirtualDisplay: () => {
+    const pkg = String(props.window?.packageName || "").trim();
+    if (!pkg) {
+      return;
+    }
+    // Force-stop then start on this window's VD (scrcpy "+" prefix).
+    exitWatch.bumpGrace(12_000);
+    cast.sendStartApp?.(`+${pkg}`);
+  },
   graceMs: 15_000,
   missLimit: 4,
+  offVdMissLimit: 2,
 });
 
 function presentError(raw) {

@@ -106,6 +106,23 @@ public final class ScrcpyControlWire {
         return buffer.array();
     }
 
+    /** scrcpy START_APP (type 16). Prefix "+" to force-stop before start. */
+    public static byte[] startApp(String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        byte[] utf8 = name.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        int length = Math.min(utf8.length, 255);
+        if (length <= 0) {
+            return null;
+        }
+        byte[] message = new byte[2 + length];
+        message[0] = (byte) 16;
+        message[1] = (byte) length;
+        System.arraycopy(utf8, 0, message, 2, length);
+        return message;
+    }
+
     private static byte[] injectKeycode(int action, int keycode) {
         ByteBuffer buffer = ByteBuffer.allocate(14).order(ByteOrder.BIG_ENDIAN);
         buffer.put((byte) TYPE_INJECT_KEYCODE);

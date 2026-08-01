@@ -122,6 +122,22 @@ function handleMaximize(id) {
   });
 }
 
+function handleAppExited(id) {
+  const win = windows.value.find((item) => item.id === id);
+  if (!win || win.closing) {
+    return;
+  }
+  // App already left — close UI/cast without another stop round-trip.
+  win.closing = true;
+  if (focusedId.value === id) {
+    const next = [...windows.value]
+      .filter((item) => !item.minimized && !item.closing && item.id !== id)
+      .sort((a, b) => b.zIndex - a.zIndex)[0];
+    focusedId.value = next?.id || "";
+  }
+  closeWindow(id);
+}
+
 function handleClose(id) {
   const win = windows.value.find((item) => item.id === id);
   if (!win || win.closing) {
@@ -245,6 +261,7 @@ watch(
           :content-width="contentSize(win).width"
           :content-height="contentSize(win).height"
           @close-window="handleClose(win.id)"
+          @app-exited="handleAppExited(win.id)"
           @switch-mirror="emit('switch-mirror')"
         />
       </MultiAppWindow>

@@ -4,7 +4,7 @@
 
 **用浏览器连真机：投屏、触控、文件、应用、终端，都在一个页面里；另有 Android 伴侣 App，在手机上管理设备与全屏投屏。**
 
-当前版本：**v1.22.2** · Node 后端 + Vue 3 Web + Android 客户端 · Android scrcpy 4.0 WebSocket + 鸿蒙 HDC JPEG + iOS WDA MJPEG 投屏
+当前版本：**v1.22.3** · Node 后端 + Vue 3 Web + Android 客户端 · Android scrcpy 4.0 WebSocket + 鸿蒙 HDC JPEG + iOS WDA MJPEG 投屏
 
 [English](README.EN.md) · **中文**
 
@@ -77,7 +77,7 @@ Cloud Phone 就是把这件事做成一个本地 Web 控制台：后端用内置
 | **Termux 宿主** | 在 Android 手机 Termux 中按 Linux 运行后端（`scripts/install-termux.sh`）；仓库已含 `backend/bin/scrcpy/linux/scrcpy-server`，无需本机 Gradle |
 | **Docker/CI** | `docker-cloud-phone/`：Linux 默认 **host 网络**（共享宿主机网卡、ADB/mDNS）；Mac/Windows 叠加 `docker-compose.bridge.yml`；多架构镜像与 Actions 推送；提交信息含 `#android` 时跳过 Docker 打包 |
 | **鸿蒙投屏** | HDC + uitest agent + JPEG 流：`cast/start` 推送 agent 并 fport，`/cast/ws` 连接后启动 JPEG 管道并推送帧；可调 **scale/quality**；**实时触控**（ECHO/hdckit `Gestures`）；触控坐标随画面缩放、横屏与预览旋转适配；agent 见 `backend/assets/harmony/` |
-| **多应用投屏** | 投屏模式下拉选「多应用投屏」：左侧栏隐藏、右侧全宽 Windows 桌面；Win11 风格任务栏与开始菜单；**每设备一个 scrcpy-server**，每窗独立 WebSocket / 虚拟屏 + `start_app`（对齐原版 `--new-display`）；**顶层窗口 60fps、其余 30fps**（8Mbps）；CSD 出码 + 前端 SPS/PPS 内联保证 WebCodecs 出画；关窗立即隐藏窗口，后台先正常退出再 `force-stop`，避免应用迁到设备主屏；拉伸/最大化同步虚拟屏尺寸；开始菜单底部可「全屏 / 取消全屏」（浏览器原生全屏）；设备上线预热包名/图标到浏览器缓存；开始菜单与应用管理优先读缓存；无图标时显示包名/图标加载进度，有图标后后台静默同步；Icon Helper 按设备缓存并增量更新；快速设置 / 通知中心 |
+| **多应用投屏** | 投屏模式下拉选「多应用投屏」：左侧栏隐藏、右侧全宽 Windows 桌面；Win11 风格任务栏与开始菜单；**每设备一个 scrcpy-server**，每窗独立 WebSocket / 虚拟屏 + `start_app`（对齐原版 `--new-display`）；**顶层窗口 60fps、其余 30fps**（8Mbps）；CSD 出码 + 前端 SPS/PPS 内联保证 WebCodecs 出画；实时看守：应用离开虚屏则自动拉回，退出则同步关窗；关窗立即隐藏窗口，后台先正常退出再 `force-stop`，避免应用迁到设备主屏；拉伸/最大化同步虚拟屏尺寸；开始菜单底部可「全屏 / 取消全屏」（浏览器原生全屏）；设备上线预热包名/图标到浏览器缓存；开始菜单与应用管理优先读缓存；无图标时显示包名/图标加载进度，有图标后后台静默同步；Icon Helper 按设备缓存并增量更新；快速设置 / 通知中心 |
 | **iOS 投屏** | WebDriverAgent MJPEG（9100）+ HTTP 触控；Windows 可将 `wda.ipa` 放到 `backend/bin/wda/` 经向导签名安装，或 Mac 端 `iproxy` + `ios-wda-bridge.mjs` 局域网桥接；浏览器投屏与导航键 |
 | **Android 伴侣 App** | 连接同一后端：设备画廊、完整设置页、投屏参数工作区、**多应用 Win11 桌面**（嵌入画布 + 全屏 Activity）、横屏全屏 H.264 投屏；流参数与 Web 对齐；工作区竖屏上下 / 横屏左右自适应 |
 | **移动投屏** | Android 端镜像导航键 / 摄像头手电变焦；Material 动效、工具栏自动隐藏；画布触控与黑边适配 |

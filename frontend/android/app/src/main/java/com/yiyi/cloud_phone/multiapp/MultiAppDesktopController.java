@@ -350,7 +350,23 @@ final class MultiAppDesktopController implements MultiAppWindowManager.Listener,
         status.setVisibility(View.VISIBLE);
         WindowBundle bundle = new WindowBundle();
         bundle.cast = new MultiAppWindowCastSession(activity, serial, deviceSdk);
-        bundle.exitWatch = new MultiAppAppExitWatcher(activity, serial, win.packageName, () -> closeWindow(win.id, false));
+        bundle.exitWatch = new MultiAppAppExitWatcher(activity, serial, win.packageName, new MultiAppAppExitWatcher.Callback() {
+            @Override
+            public void onAppExited() {
+                closeWindow(win.id, false);
+            }
+
+            @Override
+            public void onOffVirtualDisplay() {
+                if (bundle.exitWatch != null) {
+                    bundle.exitWatch.bumpGrace(12_000L);
+                }
+                if (bundle.cast != null) {
+                    // "+" = force-stop then start on this window's virtual display.
+                    bundle.cast.sendStartApp("+" + win.packageName);
+                }
+            }
+        });
         bundle.resizeScheduler = new MultiAppVdResizeScheduler(new MultiAppVdResizeScheduler.ResizeAction() {
             @Override
             public void applyResize(int vdWidth, int vdHeight) {

@@ -2,24 +2,38 @@ import { runAdb } from "./adb-command.js";
 import { runWithAdbLock } from "./adb-lock.js";
 
 /**
- * Best-effort check: whether a package still has a visible / resumed activity.
- * Used by multi-app windows to auto-close when the app exits.
+ * Multi-app window presence: still running, and whether on a virtual display.
  *
- * Important: ADB / dumpsys failures must NOT be reported as "not running"
- * (that falsely closes windows during resize / cast/start lock contention).
+ * ADB / dumpsys failures must NOT be reported as "not running"
+ * (that falsely closes windows during resize / cast lock contention).
  *
  * @param {string} serial
  * @param {string} packageName
- * @returns {Promise<{ running: boolean | null, pid: number | null, reason: string, uncertain?: boolean }>}
+ * @returns {Promise<{
+ *   running: boolean | null,
+ *   onVirtualDisplay: boolean | null,
+ *   displayIds: number[],
+ *   visible: boolean | null,
+ *   pid: number | null,
+ *   reason: string,
+ *   uncertain?: boolean,
+ * }>}
  */
 export async function getPackageRunningState(serial, packageName) {
   const pkg = String(packageName || "").trim();
   if (!pkg) {
-    return { running: false, pid: null, reason: "invalid_package" };
+    return {
+      running: false,
+      onVirtualDisplay: false,
+      displayIds: [],
+      visible: false,
+      pid: null,
+      reason: "invalid_package",
+    };
   }
 
   let pid = null;
-  let visible = null;
+  let presence = null;
   let checkFailed = false;
 
   try {
@@ -29,20 +43,28 @@ export async function getPackageRunningState(serial, packageName) {
   }
 
   try {
-    visible = await hasVisibleActivity(serial, pkg);
+    presence = await readPackageActivityPresence(serial, pkg);
   } catch {
     checkFailed = true;
-    visible = null;
+    presence = null;
   }
 
-  if (visible === true) {
-    return { running: true, visible: true, pid, reason: "visible_activity" };
+  if (presence?.hasActivity) {
+    return {
+      running: true,
+      onVirtualDisplay: presence.onVirtualDisplay,
+      displayIds: presence.displayIds,
+      visible: true,
+      pid,
+      reason: presence.onVirtualDisplay ? "on_virtual_display" : "on_main_display",
+    };
   }
 
-  if (checkFailed || visible === null) {
-    // Keep the window open when we cannot tell — e.g. adb lock during resize.
+  if (checkFailed || presence == null) {
     return {
       running: null,
+      onVirtualDisplay: null,
+      displayIds: [],
       visible: null,
       pid,
       uncertain: true,
@@ -51,11 +73,24 @@ export async function getPackageRunningState(serial, packageName) {
   }
 
   if (pid) {
-    // Process may linger after UI exit — not "running" for multi-app auto-close.
-    return { running: false, visible: false, pid, reason: "process_alive" };
+    return {
+      running: false,
+      onVirtualDisplay: false,
+      displayIds: [],
+      visible: false,
+      pid,
+      reason: "process_alive",
+    };
   }
 
-  return { running: false, visible: false, pid: null, reason: "not_found" };
+  return {
+    running: false,
+    onVirtualDisplay: false,
+    displayIds: [],
+    visible: false,
+    pid: null,
+    reason: "not_found",
+  };
 }
 
 /**
@@ -78,9 +113,8 @@ async function readPackagePid(serial, packageName) {
 /**
  * @param {string} serial
  * @param {string} packageName
- * @returns {Promise<boolean>}
  */
-async function hasVisibleActivity(serial, packageName) {
+async function readPackageActivityPresence(serial, packageName) {
   const { stdout } = await runWithAdbLock(
     () =>
       runAdb(["-s", serial, "shell", "dumpsys", "activity", "activities"], {
@@ -89,60 +123,71 @@ async function hasVisibleActivity(serial, packageName) {
       }),
     { lockKey: serial },
   );
-
-  return parsePackageVisibleInActivities(stdout, packageName);
+  return parsePackageActivityPresence(stdout, packageName);
 }
 
 /**
  * @param {string} stdout
  * @param {string} packageName
+ * @returns {{ hasActivity: boolean, onVirtualDisplay: boolean, onMainDisplay: boolean, displayIds: number[] }}
  */
-export function parsePackageVisibleInActivities(stdout, packageName) {
+export function parsePackageActivityPresence(stdout, packageName) {
   const text = String(stdout || "");
   if (!text || !packageName) {
-    return false;
+    return { hasActivity: false, onVirtualDisplay: false, onMainDisplay: false, displayIds: [] };
   }
 
   const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const recordRe = new RegExp(
-    `ActivityRecord\\{[^\\n]*\\b${escaped}/[^\\n]*`,
-    "g",
-  );
-  const records = text.match(recordRe);
-  if (!records?.length) {
-    return false;
-  }
+  const recordRe = new RegExp(`ActivityRecord\\{[^\\n]*\\b${escaped}/[^\\n]*`, "g");
+  const records = text.match(recordRe) || [];
+  const displayIds = [];
 
-  // Prefer explicit resumed / visible markers near the package.
-  const resumedRe = new RegExp(
-    `(?:topResumedActivity|mResumedActivity|ResumedActivity)[^\\n]*\\b${escaped}/`,
-    "i",
-  );
-  if (resumedRe.test(text)) {
-    return true;
-  }
-
-  const visibleRe = new RegExp(
-    `ActivityRecord\\{[^\\n]*\\b${escaped}/[^\\n]*(?:mVisible=true|isVisible=true|state=RESUMED|state=STARTED)`,
-    "i",
-  );
-  if (visibleRe.test(text)) {
-    return true;
-  }
-
-  // Apps on scrcpy virtual displays often sit on displayId>0 without mVisible on
-  // the same ActivityRecord line — still treat as running for multi-app windows.
   for (const record of records) {
     if (/finishing=true|state=DESTROYED/i.test(record)) {
       continue;
     }
-    if (/display(?:Id)?=([1-9]\d*)/i.test(record)) {
-      return true;
+    const match = record.match(/display(?:Id)?=(\d+)/i);
+    if (!match) {
+      continue;
     }
-    if (/state=(?:RESUMED|STARTED|PAUSED|STOPPED)/i.test(record)) {
-      return true;
+    const id = Number.parseInt(match[1], 10);
+    if (Number.isFinite(id) && !displayIds.includes(id)) {
+      displayIds.push(id);
     }
   }
 
-  return false;
+  const resumedRe = new RegExp(
+    `(?:topResumedActivity|mResumedActivity|ResumedActivity)[^\\n]*\\b${escaped}/`,
+    "i",
+  );
+  const hasResumed = resumedRe.test(text);
+  const hasActivity = displayIds.length > 0 || hasResumed || records.some((record) => {
+    if (/finishing=true|state=DESTROYED/i.test(record)) {
+      return false;
+    }
+    return /mVisible=true|isVisible=true|state=(?:RESUMED|STARTED|PAUSED|STOPPED)/i.test(record);
+  });
+
+  // Only report "left VD" when we positively see activities on display 0 only.
+  // Missing displayId in dumpsys must not trigger relaunch.
+  let onVirtualDisplay = false;
+  if (displayIds.some((id) => id > 0)) {
+    onVirtualDisplay = true;
+  } else if (displayIds.includes(0)) {
+    onVirtualDisplay = false;
+  } else if (hasActivity) {
+    onVirtualDisplay = true;
+  }
+  const onMainDisplay = displayIds.includes(0);
+
+  return { hasActivity, onVirtualDisplay, onMainDisplay, displayIds };
+}
+
+/**
+ * @deprecated Prefer parsePackageActivityPresence
+ * @param {string} stdout
+ * @param {string} packageName
+ */
+export function parsePackageVisibleInActivities(stdout, packageName) {
+  return parsePackageActivityPresence(stdout, packageName).hasActivity;
 }
