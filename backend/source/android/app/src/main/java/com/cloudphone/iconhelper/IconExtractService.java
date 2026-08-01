@@ -16,11 +16,13 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 
+import java.io.ByteArrayOutputStream;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -89,9 +91,14 @@ public final class IconExtractService extends Service {
 
     try {
       List<LauncherApp> apps = queryLauncherApps();
+      Map<String, IconRender> renderedIcons = new LinkedHashMap<>();
       List<String> fingerprintRows = new ArrayList<>(apps.size());
       for (LauncherApp app : apps) {
-        fingerprintRows.add(app.packageName + "|" + app.activity + "|" + app.label);
+        IconRender render = renderIconPng(app.icon);
+        renderedIcons.put(app.packageName, render);
+        String iconHash = render != null ? render.iconHash : "";
+        // Include icon hash so "same package but icon changed" triggers re-extract.
+        fingerprintRows.add(app.packageName + "|" + app.activity + "|" + app.label + "|" + iconHash);
       }
       String fingerprint = AppListFingerprint.compute(fingerprintRows);
       String previous = AppListFingerprint.readFingerprint(root);
@@ -114,13 +121,24 @@ public final class IconExtractService extends Service {
 
         String iconRel = "icons/" + app.packageName + ".png";
         File iconFile = new File(root, iconRel);
-        boolean wroteIcon = iconFile.isFile() || writeIconPng(app.icon, iconFile);
+        IconRender render = renderedIcons.get(app.packageName);
+        boolean wroteIcon = false;
+        String iconHash = render != null ? render.iconHash : null;
+        if (render != null && render.pngBytes != null && render.pngBytes.length > 0) {
+          try (FileOutputStream fos = new FileOutputStream(iconFile)) {
+            fos.write(render.pngBytes);
+            wroteIcon = true;
+          } catch (Exception ignored) {
+            wroteIcon = false;
+          }
+        }
 
         JSONObject row = new JSONObject();
         row.put("packageName", app.packageName);
         row.put("activity", app.activity);
         row.put("label", app.label);
         row.put("iconFile", wroteIcon ? iconRel : JSONObject.NULL);
+        row.put("iconHash", iconHash != null ? iconHash : JSONObject.NULL);
         appsJson.put(row);
 
         done += 1;
@@ -186,6 +204,47 @@ public final class IconExtractService extends Service {
       return true;
     } catch (Exception ignored) {
       return false;
+    }
+  }
+
+  private static final class IconRender {
+    final byte[] pngBytes;
+    final String iconHash;
+
+    IconRender(byte[] pngBytes, String iconHash) {
+      this.pngBytes = pngBytes;
+      this.iconHash = iconHash;
+    }
+  }
+
+  private static IconRender renderIconPng(Drawable drawable) {
+    if (drawable == null) {
+      return null;
+    }
+    try {
+      Bitmap bitmap = Bitmap.createBitmap(ICON_SIZE_PX, ICON_SIZE_PX, Bitmap.Config.ARGB_8888);
+      Canvas canvas = new Canvas(bitmap);
+      drawable.setBounds(0, 0, ICON_SIZE_PX, ICON_SIZE_PX);
+      drawable.draw(canvas);
+
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bitmap.compress(Bitmap.CompressFormat.PNG, 100, bos);
+      bitmap.recycle();
+
+      byte[] bytes = bos.toByteArray();
+      if (bytes.length == 0) {
+        return null;
+      }
+
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(bytes);
+      StringBuilder hex = new StringBuilder(hash.length * 2);
+      for (byte b : hash) {
+        hex.append(String.format("%02x", b));
+      }
+      return new IconRender(bytes, hex.toString());
+    } catch (Exception ignored) {
+      return null;
     }
   }
 

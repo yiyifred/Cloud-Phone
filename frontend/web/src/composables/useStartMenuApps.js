@@ -2,7 +2,10 @@ import { computed, onBeforeUnmount, ref, unref, watch } from "vue";
 
 import { useIconHelperGate } from "./useIconHelperGate.js";
 import { getErrorMessage } from "../utils/api.js";
-import { isIconHelperFirstSetupDone } from "../utils/icon-helper-consent.js";
+import {
+  isIconHelperFirstSetupDone,
+  resolveIconHelperConsent,
+} from "../utils/icon-helper-consent.js";
 import {
   fetchAndCacheLauncherApps,
   refreshLauncherAppsBrowserCache,
@@ -60,12 +63,44 @@ export function useStartMenuApps(options) {
 
   const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase());
   const isSearching = computed(() => normalizedQuery.value.length > 0);
-  const showDeniedHint = computed(
-    () => packageNamesOnly.value && hasLoadedOnce.value && !gateBusy.value,
+  const hasVisibleIcons = computed(() =>
+    apps.value.some((app) => Boolean(app?.iconDataUrl)),
   );
+  const showDeniedHint = computed(() => {
+    const serial = resolveString(options.serial);
+    // Only when user/settings actually disabled the helper — not on extract failures.
+    if (resolveIconHelperConsent(serial) !== "denied") {
+      return false;
+    }
+    return packageNamesOnly.value && hasLoadedOnce.value && !gateBusy.value && !loading.value;
+  });
+  // Progress only when the UI still has nothing useful; with icons already painted,
+  // sync/extract continues silently in the background.
+  const showLoadProgress = computed(() => {
+    if (hasVisibleIcons.value) {
+      return false;
+    }
+    return Boolean(
+      showProgressUi.value ||
+        gateBusy.value ||
+        (loading.value && !hasLoadedOnce.value),
+    );
+  });
+  const progressIndeterminate = computed(() => {
+    if (phase.value === "ensuring") {
+      return true;
+    }
+    if (phase.value === "denied" || packageNamesOnly.value) {
+      return true;
+    }
+    return !(progress.value.phase === "running" && Number(progress.value.total) > 0);
+  });
   const progressLabel = computed(() => {
     if (phase.value === "ensuring") {
       return t("iconHelper.installing");
+    }
+    if (phase.value === "denied" || packageNamesOnly.value) {
+      return t("iconHelper.loadingPackageNames");
     }
     if (progress.value.phase === "running") {
       return t("iconHelper.extractingProgress", {
@@ -197,8 +232,11 @@ export function useStartMenuApps(options) {
         loading.value = true;
       }
 
+      // Icons already on screen → keep updating secretly (no progress modal/bar).
+      const silent = painted && hasVisibleIcons.value ? true : !forceFirst;
+
       const result = await prepareIconHelper(serial, {
-        silent: !forceFirst,
+        silent,
         force: forceFirst,
       });
       if (generation !== loadGeneration) {
@@ -285,6 +323,8 @@ export function useStartMenuApps(options) {
     gateBusy,
     showDeniedHint,
     progressLabel,
+    showLoadProgress,
+    progressIndeterminate,
     filteredApps,
     isSearching,
     initialsFor: appInitials,

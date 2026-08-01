@@ -1,14 +1,17 @@
 package com.yiyi.cloud_phone.apps;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,6 +40,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DeviceAppManagerActivity extends AppCompatActivity {
     public static final String EXTRA_SERIAL = "device_serial";
@@ -47,6 +52,7 @@ public class DeviceAppManagerActivity extends AppCompatActivity {
     private AppItemAdapter adapter;
     private SwipeRefreshLayout swipeRefresh;
     private TextView textStatus;
+    private ProgressBar progressAppManager;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public static void open(Context context, String serial, String displayName) {
@@ -98,6 +104,8 @@ public class DeviceAppManagerActivity extends AppCompatActivity {
         });
 
         textStatus = findViewById(R.id.textAppStatus);
+        progressAppManager = findViewById(R.id.progressAppManager);
+        progressAppManager.setVisibility(View.GONE);
 
         RecyclerView recycler = findViewById(R.id.recyclerApps);
         recycler.setLayoutManager(new LinearLayoutManager(this));
@@ -115,12 +123,90 @@ public class DeviceAppManagerActivity extends AppCompatActivity {
 
     private void loadApps() {
         swipeRefresh.setRefreshing(true);
-        textStatus.setText(R.string.apps_loading);
         textStatus.setVisibility(View.VISIBLE);
+        progressAppManager.setVisibility(View.VISIBLE);
+        progressAppManager.setIndeterminate(true);
+        progressAppManager.setProgress(0);
+        textStatus.setText(R.string.apps_loading);
 
         ServerEndpointStore.Endpoint store = ServerEndpointStore.read(this);
         executor.execute(() -> {
             try {
+                String prefName = "cloud_phone_icon_helper";
+                SharedPreferences prefs = getSharedPreferences(prefName, Context.MODE_PRIVATE);
+                String consentKey = "icon_helper_allowed." + deviceSerial;
+
+                boolean allowIcons;
+                if (prefs.contains(consentKey)) {
+                    allowIcons = prefs.getBoolean(consentKey, false);
+                } else {
+                    allowIcons = promptIconHelperConsent();
+                    prefs.edit().putBoolean(consentKey, allowIcons).apply();
+                }
+
+                if (allowIcons) {
+                    runOnUiThread(() -> {
+                        textStatus.setText("正在安装 / 更新图标服务…");
+                        progressAppManager.setIndeterminate(true);
+                        progressAppManager.setProgress(0);
+                    });
+                    CloudPhoneApiClient.iconHelperEnsure(this, store.host, store.port, deviceSerial, false);
+
+                    long deadline = System.currentTimeMillis() + 10L * 60_000L;
+                    while (System.currentTimeMillis() < deadline) {
+                        JSONObject progressRes = CloudPhoneApiClient.iconHelperProgress(this, store.host, store.port, deviceSerial);
+                        JSONObject p = progressRes.optJSONObject("progress");
+                        if (p == null) {
+                            throw new RuntimeException("icon_helper_progress_missing");
+                        }
+
+                        String phase = p.optString("phase", "running");
+                        int total = p.optInt("total", 0);
+                        int done = p.optInt("done", 0);
+                        String current = p.optString("current", "");
+
+                        if ("running".equals(phase)) {
+                            final int safeTotal = total > 0 ? total : 0;
+                            final int percent = safeTotal > 0
+                                    ? Math.max(0, Math.min(100, Math.round((done * 100f) / safeTotal)))
+                                    : 0;
+                            final String label = safeTotal > 0
+                                    ? "正在提取（" + done + "/" + safeTotal + "）" + (current.isEmpty() ? "" : " · " + current)
+                                    : "正在提取（" + done + "）" + (current.isEmpty() ? "" : " · " + current);
+                            final int safePercent = percent;
+                            runOnUiThread(() -> {
+                                progressAppManager.setIndeterminate(false);
+                                progressAppManager.setMax(100);
+                                progressAppManager.setProgress(safePercent);
+                                textStatus.setText(label);
+                            });
+                        } else if ("done".equals(phase)) {
+                            runOnUiThread(() -> {
+                                progressAppManager.setIndeterminate(false);
+                                progressAppManager.setMax(100);
+                                progressAppManager.setProgress(100);
+                                textStatus.setText("图标提取完成");
+                            });
+                            break;
+                        } else if ("error".equals(phase)) {
+                            String message = p.optString("message", "extract_failed");
+                            throw new RuntimeException(message);
+                        }
+
+                        try {
+                            Thread.sleep(600);
+                        } catch (InterruptedException ignored) {
+                            // keep polling until deadline
+                        }
+                    }
+                } else {
+                    runOnUiThread(() -> {
+                        textStatus.setText("正在加载包名…");
+                        progressAppManager.setIndeterminate(true);
+                        progressAppManager.setProgress(0);
+                    });
+                }
+
                 JSONObject result = CloudPhoneApiClient.listApps(this, store.host, store.port, deviceSerial);
                 JSONArray appsJson = result.optJSONArray("apps");
                 List<AppItem> apps = new ArrayList<>();
@@ -132,6 +218,8 @@ public class DeviceAppManagerActivity extends AppCompatActivity {
                 AppEventLogger.get().info("apps", "load", "Loaded " + apps.size() + " apps for " + deviceSerial);
                 runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
+                    progressAppManager.setVisibility(View.GONE);
+                    adapter.setShowIcons(allowIcons);
                     adapter.setApps(apps);
                     updateCount();
                     textStatus.setVisibility(View.GONE);
@@ -139,6 +227,7 @@ public class DeviceAppManagerActivity extends AppCompatActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
+                    progressAppManager.setVisibility(View.GONE);
                     textStatus.setText(e.getMessage());
                     textStatus.setVisibility(View.VISIBLE);
                 });
@@ -149,6 +238,32 @@ public class DeviceAppManagerActivity extends AppCompatActivity {
     private void updateCount() {
         int count = adapter.getFilteredApps().size();
         // Count shown in textStatus when no error
+    }
+
+    private boolean promptIconHelperConsent() {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicBoolean allowed = new AtomicBoolean(false);
+
+        runOnUiThread(() -> new AlertDialog.Builder(this)
+                .setTitle("安装图标服务应用")
+                .setMessage("需要在设备上安装一个极小的服务应用，用于提取应用名称与图标（图标将通过 ADB 读取）。是否允许安装？")
+                .setCancelable(false)
+                .setPositiveButton("允许安装", (d, w) -> {
+                    allowed.set(true);
+                    latch.countDown();
+                })
+                .setNegativeButton("暂不安装", (d, w) -> {
+                    allowed.set(false);
+                    latch.countDown();
+                })
+                .show());
+
+        try {
+            latch.await();
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+        return allowed.get();
     }
 
     private void showAppDetail(AppItem app) {

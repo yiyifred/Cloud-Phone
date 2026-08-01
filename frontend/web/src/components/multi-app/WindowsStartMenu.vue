@@ -29,7 +29,6 @@ const {
   consentDialogOpen,
   progress,
   progressPercent,
-  showProgressUi,
   packageNamesOnly,
   answerConsent,
   searchQuery,
@@ -40,6 +39,8 @@ const {
   gateBusy,
   showDeniedHint,
   progressLabel,
+  showLoadProgress,
+  progressIndeterminate,
   filteredApps,
   isSearching,
   initialsFor,
@@ -71,11 +72,13 @@ function onToggleFullscreen(event) {
   <div class="win11-start-menu">
     <IconHelperGatePanel
       :consent-open="consentDialogOpen"
-      :busy="showProgressUi"
+      :busy="showLoadProgress"
       :progress-percent="progressPercent"
       :progress-label="progressLabel"
-      :current-package="progress.current"
+      :current-package="packageNamesOnly ? '' : progress.current"
       :denied-hint="showDeniedHint"
+      :inline="true"
+      :indeterminate="progressIndeterminate"
       @allow="answerConsent(true)"
       @deny="answerConsent(false)"
     />

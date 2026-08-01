@@ -6,10 +6,11 @@ export default {
     allow: "설치 허용",
     deny: "나중에",
     deniedHint:
-      "서비스 앱이 설치되지 않아 아이콘과 표시 이름을 가져올 수 없습니다. 패키지 이름만 표시합니다.",
+      "아이콘 도우미 설치가 꺼져 있어 패키지 이름만 표시합니다. 설정에서 허용으로 변경할 수 있습니다.",
     installing: "아이콘 도우미 설치 / 업데이트 중…",
     extracting: "앱 아이콘과 이름 추출 중…",
     extractingProgress: "추출 중 ({done}/{total})",
+    loadingPackageNames: "패키지 이름 로딩 중…",
     searchApps: "앱 검색",
     loadingApps: "앱 불러오는 중…",
     loadFailed: "앱 목록을 불러오지 못했습니다",

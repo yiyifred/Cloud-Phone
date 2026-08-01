@@ -59,7 +59,14 @@ export function useIconHelperGate() {
   const progressPercent = computed(() => {
     const p = progress.value;
     if (!p.total) {
-      return phase.value === "ensuring" ? 5 : 0;
+      if (phase.value === "ensuring") {
+        return 5;
+      }
+      if (phase.value === "denied") {
+        // Package-name-only mode doesn't provide per-item progress; show a visible bar.
+        return 30;
+      }
+      return 0;
     }
     return Math.min(100, Math.round((p.done / p.total) * 100));
   });

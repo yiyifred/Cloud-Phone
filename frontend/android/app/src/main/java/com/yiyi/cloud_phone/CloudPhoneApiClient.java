@@ -218,6 +218,41 @@ public final class CloudPhoneApiClient {
         return requestProtectedJson(context, host, port, "/api/devices/" + encSerial(serial) + "/launcher-apps" + query, "GET");
     }
 
+    // ---- Icon Helper (app icon/name extraction service) ----
+
+    public static JSONObject iconHelperStatus(Context context, String host, int port, String serial) throws Exception {
+        return requestProtectedJson(
+                context,
+                host,
+                port,
+                "/api/devices/" + encSerial(serial) + "/icon-helper/status",
+                "GET"
+        );
+    }
+
+    public static JSONObject iconHelperEnsure(
+            Context context, String host, int port, String serial, boolean force
+    ) throws Exception {
+        String qs = force ? "?force=1" : "";
+        return requestProtectedJson(
+                context,
+                host,
+                port,
+                "/api/devices/" + encSerial(serial) + "/icon-helper/ensure" + qs,
+                "POST"
+        );
+    }
+
+    public static JSONObject iconHelperProgress(Context context, String host, int port, String serial) throws Exception {
+        return requestProtectedJson(
+                context,
+                host,
+                port,
+                "/api/devices/" + encSerial(serial) + "/icon-helper/progress",
+                "GET"
+        );
+    }
+
     public static String fetchAppOrientation(Context context, String host, int port, String serial, String pkg) throws Exception {
         JSONObject result = requestProtectedJson(context, host, port,
                 "/api/devices/" + encSerial(serial) + "/apps/" + Uri.encode(pkg, StandardCharsets.UTF_8.name()) + "/orientation",

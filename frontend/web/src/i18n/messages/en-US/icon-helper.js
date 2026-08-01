@@ -6,10 +6,11 @@ export default {
     allow: "Allow install",
     deny: "Not now",
     deniedHint:
-      "Helper app not installed. Icons and display names are unavailable; package names only.",
+      "Icon helper install is turned off; package names only. Enable it under Settings → App icon helper.",
     installing: "Installing / updating icon helper…",
     extracting: "Extracting app icons and names…",
     extractingProgress: "Extracting ({done}/{total})",
+    loadingPackageNames: "Loading package names…",
     searchApps: "Search apps",
     loadingApps: "Loading apps…",
     loadFailed: "Failed to load apps",

@@ -54,7 +54,7 @@ export function setIconHelperPreference(preference) {
     },
   });
 
-  if (preference === "ask") {
+  if (preference === "ask" || preference === "allow") {
     clearAllSerialDenials();
   }
 }

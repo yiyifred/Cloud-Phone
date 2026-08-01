@@ -77,7 +77,7 @@ Cloud Phone 就是把这件事做成一个本地 Web 控制台：后端用内置
 | **Termux 宿主** | 在 Android 手机 Termux 中按 Linux 运行后端（`scripts/install-termux.sh`）；仓库已含 `backend/bin/scrcpy/linux/scrcpy-server`，无需本机 Gradle |
 | **Docker/CI** | `docker-cloud-phone/`：Linux 默认 **host 网络**（共享宿主机网卡、ADB/mDNS）；Mac/Windows 叠加 `docker-compose.bridge.yml`；多架构镜像与 Actions 推送；提交信息含 `#android` 时跳过 Docker 打包 |
 | **鸿蒙投屏** | HDC + uitest agent + JPEG 流：`cast/start` 推送 agent 并 fport，`/cast/ws` 连接后启动 JPEG 管道并推送帧；可调 **scale/quality**；**实时触控**（ECHO/hdckit `Gestures`）；触控坐标随画面缩放、横屏与预览旋转适配；agent 见 `backend/assets/harmony/` |
-| **多应用投屏** | 投屏模式下拉选「多应用投屏」：左侧栏隐藏、右侧全宽 Windows 桌面；Win11 风格任务栏与开始菜单；**每设备一个 scrcpy-server**，每窗独立 WebSocket / 虚拟屏 + `start_app`（对齐原版 `--new-display`）；编码 **60fps/8Mbps**；CSD 出码 + 前端 SPS/PPS 内联保证 WebCodecs 出画；关窗时 `am force-stop` 杀掉应用进程；拉伸/最大化同步虚拟屏尺寸；开始菜单底部可「全屏 / 取消全屏」（浏览器原生全屏）；设备上线预热包名/图标到浏览器缓存；开始菜单与应用管理优先读缓存；Icon Helper / 快速设置 / 通知中心 |
+| **多应用投屏** | 投屏模式下拉选「多应用投屏」：左侧栏隐藏、右侧全宽 Windows 桌面；Win11 风格任务栏与开始菜单；**每设备一个 scrcpy-server**，每窗独立 WebSocket / 虚拟屏 + `start_app`（对齐原版 `--new-display`）；编码 **60fps/8Mbps**；CSD 出码 + 前端 SPS/PPS 内联保证 WebCodecs 出画；关窗时 `am force-stop` 杀掉应用进程；拉伸/最大化同步虚拟屏尺寸；开始菜单底部可「全屏 / 取消全屏」（浏览器原生全屏）；设备上线预热包名/图标到浏览器缓存；开始菜单与应用管理优先读缓存；无图标时显示包名/图标加载进度，有图标后后台静默同步；Icon Helper 按设备缓存并增量更新；快速设置 / 通知中心 |
 | **iOS 投屏** | WebDriverAgent MJPEG（9100）+ HTTP 触控；Windows 可将 `wda.ipa` 放到 `backend/bin/wda/` 经向导签名安装，或 Mac 端 `iproxy` + `ios-wda-bridge.mjs` 局域网桥接；浏览器投屏与导航键 |
 | **Android 伴侣 App** | 连接同一后端：设备画廊、完整设置页、投屏参数工作区、**多应用 Win11 桌面**（嵌入画布 + 全屏 Activity）、横屏全屏 H.264 投屏；流参数与 Web 对齐；工作区竖屏上下 / 横屏左右自适应 |
 | **移动投屏** | Android 端镜像导航键 / 摄像头手电变焦；Material 动效、工具栏自动隐藏；画布触控与黑边适配 |
@@ -203,7 +203,7 @@ images/readme/
 
 ![应用管理](images/readme/apps.png)
 
-- 列表：应用名（经 scrcpy-server `PackageManager` 取 label）、包名、系统/冻结标记；**优先读设备上线写入的浏览器 IndexedDB 缓存**，后台软刷新；经授权后 Icon Helper 可补全图标
+- 列表：应用名（经 scrcpy-server `PackageManager` 取 label）、包名、系统/冻结标记；**优先读设备上线写入的浏览器 IndexedDB 缓存**，后台软刷新；经授权后 Icon Helper 可补全图标；未授权仅包名并显示加载进度，已有图标时静默增量同步
 - 详情弹窗：版本、SDK、数据目录等
 - 卸载（二次确认）、用户级冻结/解冻、导出 APK、在文件管理中打开 `dataDir`
 - 本地上传 APK 安装：`PUT .../apps/install`
@@ -284,7 +284,7 @@ images/readme/
   - 摄像头：摄像头、视频、音频（含 `audioCode`、`bufferMs` 等，流 extra 与 Web 对齐）
 - 修改参数在离开页面时自动保存
 - **右侧/下方投屏画布**：点击 **开始** 在工作区内联投屏；启动阶段显示连接日志（含后端 adb push / forward / shell 与前端 WebSocket 步骤），首帧出现后自动隐藏
-- **多应用模式**：工作区嵌入 Win11 风格桌面（任务栏居中、开始菜单、可拖拽/缩放窗口、每窗独立虚拟屏）；拖动与边角缩放手势稳定；任务栏应用过多时自动改为仅图标；开始菜单可进入独立全屏桌面 Activity，再「取消全屏」返回；快速设置 / 时钟通知从任务栏向上弹出，日期时间与月历对齐 Web，弹出层随屏幕自适应
+- **多应用模式**：工作区嵌入 Win11 风格桌面（任务栏居中、开始菜单、可拖拽/缩放窗口、每窗独立虚拟屏）；拖动与边角缩放手势稳定；任务栏应用过多时自动改为仅图标；开始菜单可进入独立全屏桌面 Activity，再「取消全屏」返回；开始菜单 / 应用管理支持图标服务授权与加载进度（有图标后后台静默同步）；快速设置 / 时钟通知从任务栏向上弹出，日期时间与月历对齐 Web，弹出层随屏幕自适应
 - **投屏工具栏**：非全屏时位于设置 Tab 栏下方全宽横条；全屏时底部悬浮
 - **全屏** 按钮可携带当前会话进入横屏全屏，无需重复启动后端
 

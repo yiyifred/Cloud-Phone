@@ -4,6 +4,7 @@ import {
   allHelperIconsCached,
   clearExtractInFlight,
   getCachedHelperApps,
+  getCachedHelperPackages,
   getCachedHelperFingerprint,
   getIconHelperProgress,
   isExtractInFlight,
@@ -13,18 +14,25 @@ import {
 import { ingestHelperOutputs, readRemoteJson } from "./icon-helper-ingest.js";
 import { ICON_HELPER_SERVICE } from "./icon-helper-paths.js";
 import { invalidateLauncherAppsCache } from "./device-launcher-apps.js";
+import { removeCachedAppIcons } from "./device-app-icons.js";
 
 export {
   getCachedHelperApps,
+  getCachedHelperPackages,
   getIconHelperProgress,
 } from "./icon-helper-cache.js";
 
 async function ingestAndInvalidate(serial, options) {
+  const previous = getCachedHelperApps(serial) || [];
   const apps = await ingestHelperOutputs(serial, options);
   if (apps?.length) {
     invalidateLauncherAppsCache(serial);
   }
-  return apps;
+  const delta = diffHelperApps(previous, apps || []);
+  if (delta?.removed?.length) {
+    removeCachedAppIcons(serial, delta.removed);
+  }
+  return { apps, delta };
 }
 
 /**
@@ -38,7 +46,14 @@ export async function startIconHelperExtract(serial, options = {}) {
   const hostFp = getCachedHelperFingerprint(serial);
 
   if (!force && cached?.length && progress.phase === "done" && allHelperIconsCached(serial, cached)) {
-    return { started: false, skipped: true, reason: "memory_cache", progress, apps: cached };
+    return {
+      started: false,
+      skipped: true,
+      reason: "memory_cache",
+      progress,
+      apps: cached,
+      delta: emptyDelta(cached),
+    };
   }
 
   const remoteManifest = await readRemoteJson(serial, "manifest.json").catch(() => null);
@@ -59,19 +74,23 @@ export async function startIconHelperExtract(serial, options = {}) {
       reason: "fingerprint_match",
       progress: getIconHelperProgress(serial),
       apps: cached,
+      delta: emptyDelta(cached),
     };
   }
 
   if (!force) {
     const remoteProgress = await readRemoteJson(serial, "progress.json").catch(() => null);
     if (remoteProgress?.phase === "done") {
-      const apps = await ingestAndInvalidate(serial, { onlyMissingIcons: true }).catch(() => []);
-      if (apps?.length) {
+      const pulled = await ingestAndInvalidate(serial, { onlyMissingIcons: true }).catch(() => ({
+        apps: [],
+        delta: emptyDelta(cached || []),
+      }));
+      if (pulled.apps?.length) {
         const fp = getCachedHelperFingerprint(serial);
         setIconHelperProgress(serial, {
           phase: "done",
-          total: apps.length,
-          done: apps.length,
+          total: pulled.apps.length,
+          done: pulled.apps.length,
           current: "",
           message: remoteFp && remoteFp === fp ? "unchanged" : "cached",
           fingerprint: fp,
@@ -81,14 +100,20 @@ export async function startIconHelperExtract(serial, options = {}) {
           skipped: true,
           reason: "remote_done",
           progress: getIconHelperProgress(serial),
-          apps,
+          apps: pulled.apps,
+          delta: pulled.delta,
         };
       }
     }
   }
 
   if (isExtractInFlight(serial) || progress.phase === "running") {
-    return { started: false, progress, apps: cached };
+    return {
+      started: false,
+      progress,
+      apps: cached,
+      delta: emptyDelta(cached || []),
+    };
   }
 
   markExtractInFlight(serial);
@@ -102,7 +127,12 @@ export async function startIconHelperExtract(serial, options = {}) {
   });
 
   void runExtractJob(serial).finally(() => clearExtractInFlight(serial));
-  return { started: true, progress: getIconHelperProgress(serial), apps: cached };
+  return {
+    started: true,
+    progress: getIconHelperProgress(serial),
+    apps: cached,
+    delta: emptyDelta(cached || []),
+  };
 }
 
 /**
@@ -149,6 +179,7 @@ export async function syncIconHelperIfChanged(serial) {
       changed: false,
       apps: cached,
       progress: getIconHelperProgress(serial),
+      delta: emptyDelta(cached),
     };
   }
 
@@ -159,11 +190,15 @@ export async function syncIconHelperIfChanged(serial) {
 
   const remoteProgress = await readRemoteJson(serial, "progress.json").catch(() => null);
   if (remoteProgress?.phase === "done") {
-    const apps = await ingestAndInvalidate(serial, { onlyMissingIcons: true });
+    const pulled = await ingestAndInvalidate(serial, { onlyMissingIcons: true });
     return {
-      changed: Boolean(apps?.length && (!cached || cached.length !== apps.length)),
-      apps,
+      changed: Boolean(
+        pulled.apps?.length &&
+          (!cached || cached.length !== pulled.apps.length || pulled.delta.changed.length),
+      ),
+      apps: pulled.apps,
       progress: getIconHelperProgress(serial),
+      delta: pulled.delta,
     };
   }
 
@@ -171,6 +206,7 @@ export async function syncIconHelperIfChanged(serial) {
     changed: false,
     apps: cached,
     progress: getIconHelperProgress(serial),
+    delta: emptyDelta(cached || []),
   };
 }
 
@@ -223,4 +259,56 @@ async function runExtractJob(serial) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function emptyDelta(apps) {
+  return {
+    added: [],
+    changed: [],
+    removed: [],
+    cachedPackages: (apps || [])
+      .map((item) => String(item?.packageName || "").trim())
+      .filter(Boolean)
+      .sort(),
+  };
+}
+
+function diffHelperApps(previous, next) {
+  const before = new Map();
+  for (const row of previous || []) {
+    const pkg = String(row?.packageName || "").trim();
+    if (!pkg) continue;
+    const hash = row?.iconHash ? String(row.iconHash) : "";
+    before.set(pkg, hash || String(row?.iconFile || ""));
+  }
+  const after = new Map();
+  for (const row of next || []) {
+    const pkg = String(row?.packageName || "").trim();
+    if (!pkg) continue;
+    const hash = row?.iconHash ? String(row.iconHash) : "";
+    after.set(pkg, hash || String(row?.iconFile || ""));
+  }
+  const added = [];
+  const changed = [];
+  const removed = [];
+  for (const [pkg, icon] of after.entries()) {
+    if (!before.has(pkg)) {
+      added.push(pkg);
+      continue;
+    }
+    if (before.get(pkg) !== icon) {
+      changed.push(pkg);
+    }
+  }
+  for (const pkg of before.keys()) {
+    if (!after.has(pkg)) {
+      removed.push(pkg);
+    }
+  }
+  return {
+    added: added.sort(),
+    changed: changed.sort(),
+    removed: removed.sort(),
+    cachedPackages: [...after.keys()].sort(),
+  };
 }

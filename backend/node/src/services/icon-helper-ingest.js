@@ -56,12 +56,16 @@ export async function ingestHelperOutputs(serial, options = {}) {
     }
 
     const iconFile = row?.iconFile ? String(row.iconFile) : null;
+    const iconHash = row?.iconHash ? String(row.iconHash) : null;
     if (iconFile) {
-      const shouldPull = !onlyMissingIcons || !hasCachedAppIcon(serial, packageName);
+      const shouldPull =
+        !onlyMissingIcons ||
+        // When iconHash is available, detect "same package but icon changed".
+        !hasCachedAppIcon(serial, packageName, iconHash);
       if (shouldPull) {
         const dataUrl = await pullHelperIconDataUrl(serial, iconFile).catch(() => null);
         if (dataUrl) {
-          setCachedAppIcon(serial, packageName, dataUrl);
+          setCachedAppIcon(serial, packageName, dataUrl, iconHash);
         }
       }
     }
@@ -71,6 +75,7 @@ export async function ingestHelperOutputs(serial, options = {}) {
       activity: String(row?.activity || ""),
       label: String(row?.label || packageName),
       iconFile,
+      iconHash,
     });
   }
 

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { hasCachedAppIcon } from "./device-app-icons.js";
 
 /**
- * @typedef {{ packageName: string, activity: string, label: string, iconFile: string | null }} HelperAppRow
+ * @typedef {{ packageName: string, activity: string, label: string, iconFile: string | null, iconHash: string | null }} HelperAppRow
  * @typedef {{ phase: string, total: number, done: number, current: string, message: string, updatedAt: number, fingerprint?: string }} HelperProgress
  */
 
@@ -24,7 +24,7 @@ const APPS_TTL_MS = 24 * 60 * 60_000;
  */
 export function fingerprintHelperApps(apps) {
   const rows = (apps || [])
-    .map((item) => `${item.packageName}|${item.activity || ""}|${item.label || ""}`)
+    .map((item) => `${item.packageName}|${item.activity || ""}|${item.label || ""}|${item.iconHash || ""}`)
     .sort();
   return createHash("sha256").update(rows.join("\n")).digest("hex");
 }
@@ -49,6 +49,18 @@ export function getCachedHelperFingerprint(serial) {
     return "";
   }
   return hit.fingerprint || "";
+}
+
+/**
+ * @param {string} serial
+ * @returns {string[]}
+ */
+export function getCachedHelperPackages(serial) {
+  const apps = getCachedHelperApps(serial) || [];
+  return apps
+    .map((item) => String(item?.packageName || "").trim())
+    .filter(Boolean)
+    .sort();
 }
 
 /**
@@ -121,6 +133,6 @@ export function allHelperIconsCached(serial, apps) {
     return false;
   }
   return apps.every(
-    (item) => !item.iconFile || hasCachedAppIcon(serial, item.packageName),
+    (item) => !item.iconFile || hasCachedAppIcon(serial, item.packageName, item.iconHash),
   );
 }

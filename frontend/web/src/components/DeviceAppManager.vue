@@ -10,7 +10,7 @@ import { useAppFeedback } from "../composables/useAppFeedback.js";
 import { installedAppsCacheLooksRich } from "../composables/device-app-manager-list.js";
 import { useDeviceAppManager } from "../composables/useDeviceAppManager.js";
 import { useIconHelperGate } from "../composables/useIconHelperGate.js";
-import { isIconHelperFirstSetupDone } from "../utils/icon-helper-consent.js";
+import { isIconHelperFirstSetupDone, resolveIconHelperConsent } from "../utils/icon-helper-consent.js";
 
 const props = defineProps({
   device: {
@@ -71,9 +71,16 @@ const {
 const gateBusy = ref(false);
 const feedback = useAppFeedback();
 
+const hasVisibleIcons = computed(() =>
+  apps.value.some((row) => Boolean(row?.iconDataUrl)),
+);
+
 const progressLabel = computed(() => {
   if (phase.value === "ensuring") {
     return t("iconHelper.installing");
+  }
+  if (phase.value === "denied" || packageNamesOnly.value) {
+    return t("iconHelper.loadingPackageNames");
   }
   if (progress.value.phase === "running") {
     return t("iconHelper.extractingProgress", {
@@ -84,9 +91,31 @@ const progressLabel = computed(() => {
   return t("iconHelper.extracting");
 });
 
-const showDeniedHint = computed(
-  () => props.open && packageNamesOnly.value && !gateBusy.value && !listLoading.value,
-);
+const showLoadProgress = computed(() => {
+  // Already showing icons → sync/extract in background only.
+  if (hasVisibleIcons.value) {
+    return false;
+  }
+  return Boolean(showProgressUi.value || gateBusy.value || listLoading.value);
+});
+const progressIndeterminate = computed(() => {
+  if (phase.value === "ensuring" || phase.value === "denied" || packageNamesOnly.value) {
+    return true;
+  }
+  return !(progress.value.phase === "running" && Number(progress.value.total) > 0);
+});
+
+const showDeniedHint = computed(() => {
+  if (!props.open) {
+    return false;
+  }
+  const serial = String(props.device?.serial || "").trim();
+  // Preference「始终允许」时不应出现「未安装服务」提示；仅用户明确关闭时显示。
+  if (resolveIconHelperConsent(serial) !== "denied") {
+    return false;
+  }
+  return packageNamesOnly.value && !gateBusy.value && !listLoading.value;
+});
 
 watch(actionHint, (message) => {
   if (message) {
@@ -119,8 +148,10 @@ watch(
     try {
       // Do not wipe connect-time cache on first open.
       const forceFirst = !isIconHelperFirstSetupDone(serial) && !painted;
+      const richPaint = painted && installedAppsCacheLooksRich(apps.value);
       const result = await prepareIconHelper(serial, {
-        silent: !forceFirst,
+        // Rich icon cache already on screen → keep work silent.
+        silent: richPaint || !forceFirst,
         force: forceFirst,
       });
       packageNamesOnly.value = Boolean(result.packageNamesOnly);
@@ -194,11 +225,13 @@ watch(
 
         <IconHelperGatePanel
           :consent-open="consentDialogOpen"
-          :busy="showProgressUi"
+          :busy="showLoadProgress"
           :progress-percent="progressPercent"
           :progress-label="progressLabel"
-          :current-package="progress.current"
+          :current-package="packageNamesOnly ? '' : progress.current"
           :denied-hint="showDeniedHint"
+          :inline="true"
+          :indeterminate="progressIndeterminate"
           @allow="answerConsent(true)"
           @deny="answerConsent(false)"
         />
@@ -216,20 +249,6 @@ watch(
         </div>
 
         <PanelAlert v-if="listError" type="error" :message="listError" />
-
-        <div v-if="listLoading && !filteredApps.length" class="device-apps__progress" role="status">
-          <div class="device-apps__progress-row">
-            <span class="device-apps__progress-label">
-              正在获取应用列表…
-            </span>
-          </div>
-          <div class="device-apps__progress-bar" aria-hidden="true">
-            <div
-              class="device-apps__progress-bar-fill"
-              :class="{ 'device-apps__progress-bar-fill--indeterminate': listLoading }"
-            />
-          </div>
-        </div>
 
         <div class="device-apps__body">
           <div class="device-apps__list-wrap">

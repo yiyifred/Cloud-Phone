@@ -1,5 +1,16 @@
-/** @type {Map<string, string | null>} */
-const iconCache = new Map();
+/**
+ * Cached icon binary as dataUrl plus a stable hash for change detection.
+ * Hash comes from Android Icon Helper.
+ *
+ * @type {Map<string, string | null>}
+ */
+const iconDataCache = new Map();
+
+/**
+ * @type {Map<string, string | null>}
+ */
+const iconHashCache = new Map();
+
 /** @type {Set<string>} */
 const iconLoading = new Set();
 
@@ -8,25 +19,57 @@ const iconLoading = new Set();
  * @param {string} packageName
  */
 export function getCachedAppIcon(serial, packageName) {
-  return iconCache.get(iconCacheKey(serial, packageName)) ?? null;
+  return iconDataCache.get(iconCacheKey(serial, packageName)) ?? null;
 }
 
 /**
  * @param {string} serial
  * @param {string} packageName
  * @param {string | null} iconDataUrl
+ * @param {string | null} iconHash
  */
-export function setCachedAppIcon(serial, packageName, iconDataUrl) {
-  iconCache.set(iconCacheKey(serial, packageName), iconDataUrl);
+export function setCachedAppIcon(serial, packageName, iconDataUrl, iconHash) {
+  const key = iconCacheKey(serial, packageName);
+  iconDataCache.set(key, iconDataUrl);
+  iconHashCache.set(key, iconHash ?? null);
 }
 
 /**
  * @param {string} serial
  * @param {string} packageName
+ * @param {string | null} [expectedIconHash]
  */
-export function hasCachedAppIcon(serial, packageName) {
-  const value = iconCache.get(iconCacheKey(serial, packageName));
-  return typeof value === "string" && value.length > 0;
+export function hasCachedAppIcon(serial, packageName, expectedIconHash = null) {
+  const key = iconCacheKey(serial, packageName);
+  const dataUrl = iconDataCache.get(key);
+  if (!(typeof dataUrl === "string" && dataUrl.length > 0)) {
+    return false;
+  }
+  if (!expectedIconHash) {
+    return true;
+  }
+  return iconHashCache.get(key) === expectedIconHash;
+}
+
+/**
+ * @param {string} serial
+ * @param {string} packageName
+ * @returns {string | null}
+ */
+export function getCachedAppIconHash(serial, packageName) {
+  return iconHashCache.get(iconCacheKey(serial, packageName)) ?? null;
+}
+
+/**
+ * @param {string} serial
+ * @param {string[]} packages
+ */
+export function removeCachedAppIcons(serial, packages) {
+  for (const packageName of packages || []) {
+    const key = iconCacheKey(serial, packageName);
+    iconDataCache.delete(key);
+    iconHashCache.delete(key);
+  }
 }
 
 /**
@@ -39,8 +82,9 @@ export function hasCachedAppIcon(serial, packageName) {
 export async function loadMissingAppIcons(serial, packages) {
   for (const packageName of packages) {
     const key = iconCacheKey(serial, packageName);
-    if (!iconCache.has(key)) {
-      iconCache.set(key, null);
+    if (!iconDataCache.has(key)) {
+      iconDataCache.set(key, null);
+      iconHashCache.set(key, null);
     }
   }
 }
@@ -64,13 +108,14 @@ export function warmupMissingAppIcons(serial, packages, limit = 4) {
  */
 export async function loadOneAppIcon(serial, packageName) {
   const key = iconCacheKey(serial, packageName);
-  if (iconCache.has(key)) {
-    return iconCache.get(key) ?? null;
+  if (iconDataCache.has(key)) {
+    return iconDataCache.get(key) ?? null;
   }
 
   iconLoading.add(key);
   try {
-    iconCache.set(key, null);
+    iconDataCache.set(key, null);
+    iconHashCache.set(key, null);
     return null;
   } finally {
     iconLoading.delete(key);

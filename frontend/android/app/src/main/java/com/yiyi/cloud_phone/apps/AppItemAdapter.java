@@ -1,11 +1,14 @@
 package com.yiyi.cloud_phone.apps;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -25,6 +28,12 @@ class AppItemAdapter extends RecyclerView.Adapter<AppItemAdapter.ViewHolder> {
     private final List<AppItem> filteredApps = new ArrayList<>();
     private String query = "";
     private OnAppClickListener clickListener;
+    private boolean showIcons = true;
+
+    void setShowIcons(boolean showIcons) {
+        this.showIcons = showIcons;
+        notifyDataSetChanged();
+    }
 
     void setApps(List<AppItem> apps) {
         allApps.clear();
@@ -78,6 +87,7 @@ class AppItemAdapter extends RecyclerView.Adapter<AppItemAdapter.ViewHolder> {
 
     class ViewHolder extends RecyclerView.ViewHolder {
         final TextView iconText;
+        final ImageView iconImage;
         final TextView labelView;
         final TextView packageView;
         final TextView badgeSystem;
@@ -86,6 +96,7 @@ class AppItemAdapter extends RecyclerView.Adapter<AppItemAdapter.ViewHolder> {
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             iconText = itemView.findViewById(R.id.appIconText);
+            iconImage = itemView.findViewById(R.id.appIconImage);
             labelView = itemView.findViewById(R.id.appLabel);
             packageView = itemView.findViewById(R.id.appPackage);
             badgeSystem = itemView.findViewById(R.id.badgeSystem);
@@ -93,8 +104,23 @@ class AppItemAdapter extends RecyclerView.Adapter<AppItemAdapter.ViewHolder> {
         }
 
         void bind(AppItem app) {
-            iconText.setText(app.getInitials());
-            setIconColor(app.packageName);
+            boolean renderedIcon = false;
+            if (showIcons && app.iconDataUrl != null && !app.iconDataUrl.isEmpty()) {
+                Bitmap bitmap = decodeDataUrl(app.iconDataUrl);
+                if (bitmap != null) {
+                    iconImage.setImageBitmap(bitmap);
+                    iconImage.setVisibility(View.VISIBLE);
+                    iconText.setVisibility(View.GONE);
+                    renderedIcon = true;
+                }
+            }
+
+            if (!renderedIcon) {
+                iconImage.setVisibility(View.GONE);
+                iconText.setVisibility(View.VISIBLE);
+                iconText.setText(app.getInitials());
+                setIconColor(app.packageName);
+            }
             labelView.setText(app.label);
             packageView.setText(app.packageName);
             badgeSystem.setVisibility(app.system ? View.VISIBLE : View.GONE);
@@ -114,6 +140,18 @@ class AppItemAdapter extends RecyclerView.Adapter<AppItemAdapter.ViewHolder> {
             bg.setShape(GradientDrawable.OVAL);
             bg.setColor(color);
             iconText.setBackground(bg);
+            iconText.setTextColor(Color.WHITE);
+        }
+
+        private Bitmap decodeDataUrl(String dataUrl) {
+            try {
+                int comma = dataUrl.indexOf(',');
+                if (comma < 0) return null;
+                byte[] bytes = android.util.Base64.decode(dataUrl.substring(comma + 1), android.util.Base64.DEFAULT);
+                return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            } catch (Exception ignored) {
+                return null;
+            }
         }
     }
 }

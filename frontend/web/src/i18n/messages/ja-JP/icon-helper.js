@@ -6,10 +6,11 @@ export default {
     allow: "インストールを許可",
     deny: "後で",
     deniedHint:
-      "サービスアプリ未インストールのため、アイコンと表示名を取得できません。パッケージ名のみ表示します。",
+      "アイコンサービスのインストールがオフのため、パッケージ名のみ表示します。設定で許可に変更できます。",
     installing: "アイコンサービスをインストール / 更新中…",
     extracting: "アプリのアイコンと名前を抽出中…",
     extractingProgress: "抽出中（{done}/{total}）",
+    loadingPackageNames: "パッケージ名を読み込み中…",
     searchApps: "アプリを検索",
     loadingApps: "アプリを読み込み中…",
     loadFailed: "アプリ一覧を読み込めません",

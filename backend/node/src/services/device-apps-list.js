@@ -1,6 +1,7 @@
 import { runAdb } from "./adb-command.js";
 import { runWithAdbLock } from "./adb-lock.js";
 import { fetchScrcpyAppLabels } from "./device-apps-scrcpy-labels.js";
+import { getCachedAppIcon } from "./device-app-icons.js";
 
 /**
  * @param {string} stdout
@@ -81,6 +82,7 @@ export async function listInstalledApps(serial) {
       return {
         packageName,
         label: scrcpyApp?.label ?? packageName,
+        iconDataUrl: getCachedAppIcon(serial, packageName),
         apkPath,
         system: scrcpyApp?.system ?? isSystemApkPath(apkPath),
         enabled: !disabled.has(packageName),
