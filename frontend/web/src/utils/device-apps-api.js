@@ -41,6 +41,14 @@ export async function setDeviceAppFrozen(serial, packageName, frozen) {
   );
 }
 
+/** Soft exit then force-stop if still running (multi-app window close). */
+export async function stopDeviceApp(serial, packageName) {
+  return requestJson(
+    `/api/devices/${encodeURIComponent(serial)}/apps/${encodeURIComponent(packageName)}/stop`,
+    { method: "POST" },
+  );
+}
+
 export async function forceStopDeviceApp(serial, packageName) {
   return requestJson(
     `/api/devices/${encodeURIComponent(serial)}/apps/${encodeURIComponent(packageName)}/force-stop`,

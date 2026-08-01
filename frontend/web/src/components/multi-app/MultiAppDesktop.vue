@@ -7,7 +7,7 @@ import WindowsTaskbar from "./WindowsTaskbar.vue";
 import IconHelperGatePanel from "../IconHelperGatePanel.vue";
 import { useMultiAppIconWarm } from "../../composables/useMultiAppIconWarm.js";
 import { useMultiAppWindows } from "../../composables/useMultiAppWindows.js";
-import { fetchAppOrientation, forceStopDeviceApp } from "../../utils/device-apps-api.js";
+import { fetchAppOrientation, forceStopDeviceApp, stopDeviceApp } from "../../utils/device-apps-api.js";
 import {
   isBrowserFullscreenFor,
   toggleBrowserFullscreen,
@@ -124,14 +124,34 @@ function handleMaximize(id) {
 
 function handleClose(id) {
   const win = windows.value.find((item) => item.id === id);
-  const serial = String(props.device?.serial || "").trim();
-  const packageName = String(win?.packageName || "").trim();
-  closeWindow(id);
-  // Tear down cast via unmount; also kill the app process so it does not linger
-  // on the device after the virtual display is released.
-  if (serial && packageName) {
-    void forceStopDeviceApp(serial, packageName).catch(() => {});
+  if (!win || win.closing) {
+    return;
   }
+  const serial = String(props.device?.serial || "").trim();
+  const packageName = String(win.packageName || "").trim();
+  // Hide UI immediately; keep cast/VD mounted until the device app is stopped
+  // (noVdDestroyContent would otherwise move the app onto the tablet).
+  win.closing = true;
+  if (focusedId.value === id) {
+    const next = [...windows.value]
+      .filter((item) => !item.minimized && !item.closing && item.id !== id)
+      .sort((a, b) => b.zIndex - a.zIndex)[0];
+    focusedId.value = next?.id || "";
+  }
+  void (async () => {
+    if (serial && packageName) {
+      try {
+        await stopDeviceApp(serial, packageName);
+      } catch {
+        try {
+          await forceStopDeviceApp(serial, packageName);
+        } catch {
+          // Still tear down even if stop fails.
+        }
+      }
+    }
+    closeWindow(id);
+  })();
 }
 
 function handleMove(id, bounds) {
@@ -202,6 +222,7 @@ watch(
     <div ref="desktopRef" class="multi-app-desktop__canvas" aria-label="Windows 桌面">
       <MultiAppWindow
         v-for="win in windows"
+        v-show="!win.closing"
         :key="win.id"
         :window="win"
         :focused="focusedId === win.id"

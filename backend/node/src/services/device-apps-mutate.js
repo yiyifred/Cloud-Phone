@@ -61,7 +61,10 @@ export async function uninstallPackage(serial, packageName) {
 }
 
 /**
- * Force-stop a package process (am force-stop). Used when closing multi-app windows.
+ * Force-stop a package process (am force-stop).
+ * Prefer {@link import("./device-apps-stop.js").stopPackage} for multi-app close
+ * (graceful exit first, then force-stop).
+ *
  * @param {string} serial
  * @param {string} packageName
  */

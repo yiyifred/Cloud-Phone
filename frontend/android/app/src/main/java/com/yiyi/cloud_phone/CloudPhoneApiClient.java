@@ -205,6 +205,13 @@ public final class CloudPhoneApiClient {
                 "/api/devices/" + encSerial(serial) + "/apps/" + Uri.encode(pkg, StandardCharsets.UTF_8.name()) + "/apk");
     }
 
+    /** Soft exit then force-stop if still running (multi-app window close). */
+    public static JSONObject stopApp(Context context, String host, int port, String serial, String pkg) throws Exception {
+        return postProtectedJson(context, host, port,
+                "/api/devices/" + encSerial(serial) + "/apps/" + Uri.encode(pkg, StandardCharsets.UTF_8.name()) + "/stop",
+                new JSONObject());
+    }
+
     public static JSONObject forceStopApp(Context context, String host, int port, String serial, String pkg) throws Exception {
         return postProtectedJson(context, host, port,
                 "/api/devices/" + encSerial(serial) + "/apps/" + Uri.encode(pkg, StandardCharsets.UTF_8.name()) + "/force-stop",

@@ -26,6 +26,7 @@ let windowSeq = 0;
  *   height: number,
  *   minimized: boolean,
  *   maximized: boolean,
+ *   closing?: boolean,
  *   zIndex: number,
  *   restore: { x: number, y: number, width: number, height: number } | null,
  * }} MultiAppWindowState
@@ -51,7 +52,9 @@ export function useMultiAppWindows() {
     windows.value.filter((item) => !item.minimized),
   );
 
-  const taskbarWindows = computed(() => windows.value);
+  const taskbarWindows = computed(() =>
+    windows.value.filter((item) => !item.closing),
+  );
 
   /**
    * @param {{ packageName: string, activity?: string, label?: string, iconDataUrl?: string | null, orientation?: "portrait" | "landscape" }} app

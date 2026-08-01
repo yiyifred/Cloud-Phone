@@ -390,22 +390,52 @@ final class MultiAppDesktopController implements MultiAppWindowManager.Listener,
         bundle.cast.start(win);
     }
 
-    private void closeWindow(String id, boolean forceStopApp) {
+    private void closeWindow(String id, boolean stopApp) {
         MultiAppWindowState win = windowManager.find(id);
+        if (stopApp && win != null) {
+            String packageName = win.packageName;
+            WindowBundle bundle = bundles.get(id);
+            // Instant UI close; keep cast/VD until stop finishes (noVdDestroyContent).
+            windowManager.closeWindow(id);
+            if (bundle != null && bundle.exitWatch != null) {
+                bundle.exitWatch.release();
+                bundle.exitWatch = null;
+            }
+            ServerEndpointStore.Endpoint store = ServerEndpointStore.read(activity);
+            executor.execute(() -> {
+                try {
+                    CloudPhoneApiClient.stopApp(activity, store.host, store.port, serial, packageName);
+                } catch (Exception stopErr) {
+                    try {
+                        CloudPhoneApiClient.forceStopApp(activity, store.host, store.port, serial, packageName);
+                    } catch (Exception ignored) {
+                    }
+                } finally {
+                    activity.runOnUiThread(() -> releaseClosingBundle(id));
+                }
+            });
+            return;
+        }
+        if (win == null) {
+            // Already closed in UI; pending background stop owns the bundle.
+            return;
+        }
+        finishCloseWindow(id);
+    }
+
+    private void releaseClosingBundle(String id) {
         WindowBundle bundle = bundles.remove(id);
         if (bundle != null) {
             releaseBundle(bundle, windowManager.isEmpty());
         }
-        if (forceStopApp && win != null) {
-            ServerEndpointStore.Endpoint store = ServerEndpointStore.read(activity);
-            executor.execute(() -> {
-                try {
-                    CloudPhoneApiClient.forceStopApp(activity, store.host, store.port, serial, win.packageName);
-                } catch (Exception ignored) {
-                }
-            });
-        }
+    }
+
+    private void finishCloseWindow(String id) {
+        WindowBundle bundle = bundles.remove(id);
         windowManager.closeWindow(id);
+        if (bundle != null) {
+            releaseBundle(bundle, windowManager.isEmpty());
+        }
     }
 
     private void releaseBundle(WindowBundle bundle, boolean releaseBackend) {
