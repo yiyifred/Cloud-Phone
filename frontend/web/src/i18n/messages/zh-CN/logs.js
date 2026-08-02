@@ -25,5 +25,7 @@ export default {
       ui: "界面",
     },
     count: "{count} 条",
+    loadMore: "加载更多",
+    loading: "正在加载日志…",
   },
 };

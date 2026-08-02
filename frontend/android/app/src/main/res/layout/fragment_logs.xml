@@ -113,4 +113,12 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/buttonLoadMoreLogs"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/logs_load_more"
+        android:visibility="gone" />
+
 </LinearLayout>

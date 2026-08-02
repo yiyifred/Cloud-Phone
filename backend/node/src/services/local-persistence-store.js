@@ -5,7 +5,6 @@ import { DatabaseSync } from "node:sqlite";
 import { BACKEND_DATA_PATH } from "../config/paths.js";
 
 const DATABASE_PATH = path.resolve(BACKEND_DATA_PATH, "cloud-phone.db");
-const MAX_LOG_ENTRIES = 5000;
 const DEFAULT_SETTINGS = Object.freeze({
   deviceListIntervalSeconds: 1,
   screenshotIntervalSeconds: 5,
@@ -35,17 +34,6 @@ database.exec(`
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
-  CREATE TABLE IF NOT EXISTS app_event_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL,
-    level TEXT NOT NULL,
-    category TEXT NOT NULL,
-    event TEXT NOT NULL,
-    message TEXT NOT NULL,
-    details TEXT,
-    device_serial TEXT,
-    device_name TEXT
-  );
 `);
 
 const selectSettingsStatement = database.prepare("SELECT key, value FROM user_settings");
@@ -63,31 +51,6 @@ const upsertRuntimeStatement = database.prepare(`
   ON CONFLICT(key) DO UPDATE SET
     value = excluded.value,
     updated_at = excluded.updated_at
-`);
-const insertLogStatement = database.prepare(`
-  INSERT INTO app_event_logs (
-    timestamp,
-    level,
-    category,
-    event,
-    message,
-    details,
-    device_serial,
-    device_name
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-`);
-const selectLogsStatement = database.prepare(`
-  SELECT id, timestamp, level, category, event, message, details, device_serial, device_name
-  FROM app_event_logs
-  ORDER BY id DESC
-  LIMIT ?
-`);
-const clearLogsStatement = database.prepare("DELETE FROM app_event_logs");
-const trimLogsStatement = database.prepare(`
-  DELETE FROM app_event_logs
-  WHERE id NOT IN (
-    SELECT id FROM app_event_logs ORDER BY id DESC LIMIT ?
-  )
 `);
 
 function safeParseJson(value, fallback) {
@@ -186,12 +149,10 @@ export function getStoredRuntimeState() {
   const rows = readRuntimeRows();
   return {
     ...DEFAULT_RUNTIME_STATE,
-    // Keep known fields normalized for backward compatibility.
     activeTab: normalizeString(rows.activeTab, DEFAULT_RUNTIME_STATE.activeTab),
     selectedDeviceSerial: String(rows.selectedDeviceSerial || ""),
     groupControlGridSerials: normalizeStringArray(rows.groupControlGridSerials),
     groupControlActiveSerials: normalizeStringArray(rows.groupControlActiveSerials),
-    // Keep any extra runtime keys (e.g. icon helper consent).
     ...rows,
   };
 }
@@ -199,7 +160,6 @@ export function getStoredRuntimeState() {
 export function patchStoredRuntimeState(patch = {}) {
   const current = getStoredRuntimeState();
   const now = new Date().toISOString();
-
   /** @type {Record<string, any>} */
   const updates = {};
 
@@ -216,7 +176,6 @@ export function patchStoredRuntimeState(patch = {}) {
     updates.groupControlActiveSerials = normalizeStringArray(patch.groupControlActiveSerials);
   }
 
-  // Allow arbitrary extra keys for runtime preferences.
   for (const [key, value] of Object.entries(patch)) {
     if (
       key === "activeTab" ||
@@ -236,40 +195,9 @@ export function patchStoredRuntimeState(patch = {}) {
   return getStoredRuntimeState();
 }
 
-function trimLogsIfNeeded() {
-  trimLogsStatement.run(MAX_LOG_ENTRIES);
-}
-
-export function appendStoredLog(entry = {}) {
-  const timestamp = String(entry.timestamp || new Date().toISOString());
-  insertLogStatement.run(
-    timestamp,
-    normalizeString(entry.level, "info"),
-    normalizeString(entry.category, "ui"),
-    normalizeString(entry.event, "event"),
-    normalizeString(entry.message, ""),
-    entry.details == null ? null : JSON.stringify(entry.details),
-    entry.deviceSerial ? String(entry.deviceSerial) : null,
-    entry.deviceName ? String(entry.deviceName) : null,
-  );
-  trimLogsIfNeeded();
-}
-
-export function listStoredLogs(limit = 2000) {
-  const rows = selectLogsStatement.all(Math.min(MAX_LOG_ENTRIES, Math.max(1, Number(limit) || 2000)));
-  return rows.map((row) => ({
-    id: row.id,
-    timestamp: row.timestamp,
-    level: row.level,
-    category: row.category,
-    event: row.event,
-    message: row.message,
-    details: row.details ? safeParseJson(row.details, null) : null,
-    deviceSerial: row.device_serial,
-    deviceName: row.device_name,
-  }));
-}
-
-export function clearStoredLogs() {
-  clearLogsStatement.run();
-}
+export {
+  appendStoredLog,
+  clearStoredLogs,
+  listStoredLogs,
+  listStoredLogsPage,
+} from "./local-persistence-logs.js";

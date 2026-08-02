@@ -4,7 +4,7 @@
 
 **Manage real Android devices in the browser: cast, control, files, apps, and shell — plus an Android companion app for the gallery and fullscreen cast on your phone.**
 
-Current version: **v1.22.4** · Node backend + Vue 3 web + Android app · Android scrcpy 4.0 WebSocket + HarmonyOS HDC JPEG + iOS WDA MJPEG cast
+Current version: **v1.22.5** · Node backend + Vue 3 web + Android app · Android scrcpy 4.0 WebSocket + HarmonyOS HDC JPEG + iOS WDA MJPEG cast
 
 [中文](README.md) · **English**
 
@@ -67,7 +67,7 @@ Mirror settings panels follow grouping ideas from **escrcpy**, but this repo is 
 - **Naive UI shell**: shared components across login, settings, logs, and modals; mobile web uses bottom tab navigation with logout/theme in Settings
 - `npm run dev` waits for backend health before Vite; light/dark theme
 - **i18n**: switch UI language in Settings (zh-CN, en-US, zh-TW, ja-JP, ko-KR); core shell strings localized
-- **Activity log**: sidebar **Logs** tab with Debug / Info / Warn / Error levels and auth / navigation / device / cast / stream / settings / UI categories; search, filters, expandable JSON details, and proper scrolling for long log lists
+- **Activity log**: sidebar **Logs** tab with Debug / Info / Warn / Error levels and auth / navigation / device / cast / stream / settings / UI categories; **paginated load** (load more); search, filters, expandable JSON details, and proper scrolling for long log lists
 - **API security**: HttpOnly session cookie (~**150 days**) persisted in SQLite (survives restart); password change revokes all sessions; on 401 soft-recover cookie → remembered password before login UI; JSON AES-GCM; WebSocket requires a valid session
 - **Device entry**: top-right Add Device modal; Android USB / pair code / QR / **direct connect** (IP + ADB port for ReDroid, emulators, etc.); **HarmonyOS USB/HDC**; **Apple WDA** — Windows USB wizard (sign/install/connect), or Mac `tools/ios-wda-bridge.mjs` for LAN discovery
 - **Termux host**: run the backend on Android via Termux as Linux (`scripts/install-termux.sh`); repo includes `backend/bin/scrcpy/linux/scrcpy-server` (no local Gradle build)
@@ -129,6 +129,7 @@ Images are embedded in the corresponding feature sections below.
 
 - Sidebar **Logs** tab records key console actions and streaming events
 - Four severity levels (Debug / Info / Warn / Error) and seven categories (auth, navigation, device, cast, stream, settings, UI)
+- **Paginated load** (50 per page by default, load more) so clients are not sent the full log dump at once
 - Keyword search, level/category filters, clear log; each entry expands to JSON details (cast options, stream timeline, page-exit reason, etc.)
 - Cast startup logs (scrcpy / HarmonyOS / iOS) are bridged into the global log automatically
 
@@ -264,8 +265,8 @@ Source: `frontend/android/`. Uses the same Node backend and session model as the
 
 ### Activity log (bottom tab · Logs)
 
-- In-app event log (auth, device, cast, files, apps, terminal, group, settings, etc.)
-- Filter by level/category, search, and clear
+- In-app event log (auth, device, cast, files, apps, terminal, group, settings, etc.), synced to the server
+- **Paginated load** (load more); filter by level/category, search, and clear
 
 ### Settings (bottom tab · Settings)
 

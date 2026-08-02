@@ -256,10 +256,6 @@ export async function migrateLegacyBrowserPersistence() {
 }
 
 export async function persistLogEntry(entry) {
-  state.logs.unshift(entry);
-  if (state.logs.length > 5000) {
-    state.logs.length = 5000;
-  }
   await appendPersistedLog(entry);
 }
 

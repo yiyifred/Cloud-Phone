@@ -10,7 +10,7 @@ import { useAppFeedback } from "../composables/useAppFeedback.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useDevices } from "../composables/useDevices.js";
 import { useOnlineDevicesAppsWarm } from "../composables/useOnlineDevicesAppsWarm.js";
-import { logInfo, replaceAppEventLog } from "../utils/app-event-logger.js";
+import { logInfo } from "../utils/app-event-logger.js";
 import {
   getCachedRuntimeState,
   hydrateLocalPersistence,
@@ -95,7 +95,6 @@ async function hydrateAuthenticatedPersistence() {
     const payload = await hydrateLocalPersistence();
     applySettingsToForm(payload.settings);
     applyRuntimeStateToUi(payload.runtimeState);
-    replaceAppEventLog(payload.logs);
   } catch {
     applyRuntimeStateToUi(getCachedRuntimeState());
   }

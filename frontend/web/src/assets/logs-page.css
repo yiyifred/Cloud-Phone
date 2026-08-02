@@ -167,3 +167,9 @@
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+.logs-page__more {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 8px;
+}

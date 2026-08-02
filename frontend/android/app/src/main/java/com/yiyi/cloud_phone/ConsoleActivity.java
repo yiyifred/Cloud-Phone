@@ -27,6 +27,7 @@ public class ConsoleActivity extends AppCompatActivity {
         }
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_console);
+        com.yiyi.cloud_phone.logs.AppEventLogger.get().attach(this);
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.consoleRoot), (view, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());

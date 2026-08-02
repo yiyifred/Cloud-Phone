@@ -5,6 +5,7 @@ import {
   getStoredRuntimeState,
   getStoredSettings,
   listStoredLogs,
+  listStoredLogsPage,
   patchStoredRuntimeState,
   patchStoredSettings,
 } from "../services/local-persistence-store.js";
@@ -52,13 +53,15 @@ export async function handleLocalPersistenceRoute(req, res, method, pathname, ur
   }
 
   if (method === "GET" && pathname === "/api/local-persistence") {
-    const limit = Number(url.searchParams.get("logLimit")) || 2000;
+    // Default: do not embed logs (clients load /api/logs in pages).
+    const rawLimit = url.searchParams.get("logLimit");
+    const logLimit = rawLimit == null || rawLimit === "" ? 0 : Number(rawLimit);
     sendProtectedJson(res, 200, {
       success: true,
       version: APP_VERSION,
       settings: getStoredSettings(),
       runtimeState: getStoredRuntimeState(),
-      logs: listStoredLogs(limit),
+      logs: logLimit > 0 ? listStoredLogs(logLimit) : [],
     });
     return true;
   }
@@ -88,11 +91,15 @@ export async function handleLocalPersistenceRoute(req, res, method, pathname, ur
   }
 
   if (method === "GET" && pathname === "/api/logs") {
-    const limit = Number(url.searchParams.get("limit")) || 2000;
+    const beforeRaw = url.searchParams.get("beforeId");
+    const page = listStoredLogsPage({
+      limit: url.searchParams.get("limit"),
+      beforeId: beforeRaw == null || beforeRaw === "" ? null : beforeRaw,
+    });
     sendProtectedJson(res, 200, {
       success: true,
       version: APP_VERSION,
-      logs: listStoredLogs(limit),
+      ...page,
     });
     return true;
   }

@@ -25,5 +25,7 @@ export default {
       ui: "UI",
     },
     count: "{count} entries",
+    loadMore: "Load more",
+    loading: "Loading logs…",
   },
 };

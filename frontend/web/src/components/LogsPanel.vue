@@ -18,10 +18,13 @@ const {
   searchQuery,
   logLevels,
   logCategories,
+  loading,
+  hasMore,
   toggleExpanded,
   isExpanded,
   clearLog,
   formatDetails,
+  loadMore,
 } = useAppEventLog();
 
 const levelTabs = computed(() => [
@@ -118,10 +121,16 @@ const emptyMessage = computed(() =>
           <pre v-else class="logs-page__details-pre">{{ entry.event }}</pre>
         </div>
       </article>
+
+      <div v-if="hasMore" class="logs-page__more">
+        <NButton :loading="loading" secondary size="small" @click="loadMore">
+          {{ t("logs.loadMore") }}
+        </NButton>
+      </div>
     </div>
 
     <div v-else class="logs-page__empty">
-      {{ emptyMessage }}
+      {{ loading ? t("logs.loading") : emptyMessage }}
     </div>
   </section>
 </template>

@@ -327,6 +327,8 @@
     <string name="logs_clear_confirm_title">清除日志</string>
     <string name="logs_clear_confirm_message">确定清除所有日志？</string>
     <string name="logs_empty">暂无日志记录</string>
+    <string name="logs_load_more">加载更多</string>
+    <string name="logs_loading">正在加载…</string>
     <string name="logs_level_all">全部</string>
     <string name="logs_level_debug">Debug</string>
     <string name="logs_level_info">Info</string>
