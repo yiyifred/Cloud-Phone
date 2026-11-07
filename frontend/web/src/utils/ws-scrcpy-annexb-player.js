@@ -10,6 +10,7 @@ import {
   forEachAnnexBNal,
   startCodeLenAt,
 } from "./h264-nal-utils.js";
+import { CanvasFitLayout } from "./canvas-fit.js";
 
 export class WsScrcpyAnnexBPlayer {
   static isSupported() {
@@ -37,12 +38,9 @@ export class WsScrcpyAnnexBPlayer {
     this._keyframeWaitTimer = 0;
     this._spsUnit = null;
     this._ppsUnit = null;
-
-    if (this.canvas) {
-      this.canvas.style.width = "100%";
-      this.canvas.style.height = "100%";
-      this.canvas.style.objectFit = "contain";
-    }
+    // 尺寸交给 CanvasFitLayout：canvas 是替换元素，object-fit 无效；width/height:100%
+    // 会非等比拉伸位图（画面变形、触摸点偏移）。详见 utils/canvas-fit.js。
+    this.fitLayout = this.canvas ? new CanvasFitLayout(this.canvas) : null;
 
     this.#createDecoder();
   }
@@ -144,6 +142,8 @@ export class WsScrcpyAnnexBPlayer {
         this.canvas.width = frameWidth;
         this.canvas.height = frameHeight;
       }
+      // 位图尺寸确定后按视频宽高比重排，保证不变形、触摸坐标可换算
+      this.fitLayout?.setVideoSize(frameWidth, frameHeight);
       if (
         this.videoFrameSize.width !== frameWidth ||
         this.videoFrameSize.height !== frameHeight
@@ -287,5 +287,12 @@ export class WsScrcpyAnnexBPlayer {
     this.onNeedKeyframe = null;
     this._spsUnit = null;
     this._ppsUnit = null;
+    this.fitLayout?.destroy();
+    this.fitLayout = null;
+  }
+
+  /** 画面实际矩形（CSS px，容器坐标系）：触摸/旋转换算应以此为准。 */
+  get contentRect() {
+    return this.fitLayout?.contentRect ?? null;
   }
 }

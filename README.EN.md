@@ -230,6 +230,16 @@ Images are embedded in the corresponding feature sections below.
 - Tools: `tools/build-scrcpy-server.mjs`, `compare-scrcpy-upstream.mjs`, `sync-scrcpy-from-upstream.mjs`, `build-scrcpy.mjs`, `download-scrcpy.mjs`, `sync-scrcpy-source.mjs`
 - OTG / UHID cast modes have been removed; only **mirror** and **camera** remain
 
+### Security hardening (1.23.0)
+
+- **Login brute-force protection**: 5 failures per IP in 5 minutes lock the IP for 15 minutes (exponential up to 60), with a global 20 per 10 minutes; responses carry `429` + `Retry-After` and the bucket is cleared on success
+- **Session cookie**: `Max-Age` defaults to 30 days (`AUTH_SESSION_DAYS`), plus `HttpOnly`, `SameSite=Lax`, and `Secure` whenever the request arrives over HTTPS; signature comparison is constant time
+- **Request limits**: JSON bodies capped at 1 MiB, uploads at 256 MiB (hard ceiling 1 GiB) with `413` on overflow; the HTTP server sets `requestTimeout` / `headersTimeout` / `keepAliveTimeout`
+- **Origin checks**: CORS uses an explicit allowlist; WebSocket handshakes validate `Origin` and enforce `maxPayload` of 4 MiB plus concurrency caps (terminal 4 / device 32 / cast 64)
+- **Data & logs**: data directory `0700`, `auth.key` and the database `0600`; the activity log gains an `actor` column and truncates long `message` / `details`
+- **Device apps**: `packageName` is validated against an allowlist regex before reaching `adb shell` (`400` otherwise); install temp packages use random names and `0600`
+- **Frontend delivery**: CSP / XFO / nosniff / Referrer-Policy / Permissions-Policy are injected centrally; the self-signed certificate is persisted and reused (`.tls/`, `0700`/`0600`)
+
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ---

@@ -205,7 +205,8 @@ public class SettingsFragment extends Fragment {
         }
         networkExecutor.execute(() -> {
             try {
-                AuthApiClient.SessionStatus status = authApiClient.fetchSession(endpoint.host, endpoint.port);
+                AuthApiClient.SessionStatus status = authApiClient.fetchSession(
+                        requireContext(), endpoint.host, endpoint.port);
                 mainHandler.post(() -> {
                     if (!isAdded()) {
                         return;

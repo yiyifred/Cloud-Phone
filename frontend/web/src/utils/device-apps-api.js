@@ -1,4 +1,5 @@
-import { fetchEncryptedBinary, parseEncryptedFetchResponse, requestJson } from "./api.js";
+import { fetchEncryptedBinary, requestJson } from "./api.js";
+import { putEncryptedBinary } from "./api-binary.js";
 
 export async function fetchDeviceApps(serial) {
   const result = await requestJson(`/api/devices/${encodeURIComponent(serial)}/apps`);
@@ -76,17 +77,5 @@ export async function downloadDeviceAppApk(serial, packageName, filenameHint) {
 }
 
 export async function installDeviceApk(serial, file) {
-  const url = `/api/devices/${encodeURIComponent(serial)}/apps/install`;
-  const response = await fetch(url, {
-    method: "PUT",
-    credentials: "include",
-    body: file,
-  });
-  const payload = await parseEncryptedFetchResponse(response);
-
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.message ?? payload.error ?? "安装失败");
-  }
-
-  return payload;
+  return putEncryptedBinary(`/api/devices/${encodeURIComponent(serial)}/apps/install`, file);
 }

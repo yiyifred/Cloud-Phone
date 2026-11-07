@@ -2,7 +2,7 @@ import { requestJson } from "./api.js";
 
 export async function fetchPublicPreferences() {
   const result = await requestJson("/api/public/preferences", {
-    plainJson: true,
+    wireEncrypted: true,
     skipAuthExpire: true,
     allowFailure: true,
   });
@@ -13,7 +13,7 @@ export async function savePublicPreferences(preferences) {
   const result = await requestJson("/api/public/preferences", {
     method: "POST",
     body: preferences,
-    plainJson: true,
+    wireEncrypted: true,
     skipAuthExpire: true,
     allowFailure: true,
   });

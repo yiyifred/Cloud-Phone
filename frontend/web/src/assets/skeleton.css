@@ -1,0 +1,165 @@
+/**
+ * 新增 UI 原子（骨架屏 / 空态）的样式。
+ *
+ * 独立成文件而不写进 main.css：main.css 由并行的 UI 主样式改动占用，
+ * 新增组件自带样式文件可以避免同文件冲突；颜色全部由 --text/--line 经
+ * color-mix 派生，浅色/深色主题自动跟随，无需再写一套主题覆盖。
+ */
+
+/* ---------- 骨架屏 ---------- */
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.15rem;
+  align-content: start;
+  /* 与设备画廊同列宽，加载完成切换时不会跳版 */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+  padding-bottom: 0.35rem;
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  height: var(--skeleton-card-height, 14rem);
+  padding-bottom: 0.95rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+}
+
+.skeleton-card__media,
+.skeleton-card__line {
+  /* shimmer：高亮带在 --text 派生的两档明度之间平移，纯 CSS 无依赖 */
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--text) 5%, transparent) 20%,
+    color-mix(in srgb, var(--text) 14%, transparent) 42%,
+    color-mix(in srgb, var(--text) 5%, transparent) 64%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.4s linear infinite;
+}
+
+.skeleton-card__media {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.skeleton-card__line {
+  height: 0.7rem;
+  margin: 0 0.95rem;
+  border-radius: 999px;
+}
+
+.skeleton-card__line--wide {
+  width: calc(100% - 1.9rem);
+}
+
+.skeleton-card__line--narrow {
+  width: min(45%, calc(100% - 1.9rem));
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 180% 0;
+  }
+
+  to {
+    background-position: -80% 0;
+  }
+}
+
+/* 尊重系统「减少动态效果」偏好：保留占位色，不再扫光 */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card__media,
+  .skeleton-card__line {
+    animation: none;
+  }
+}
+
+/* AppShell 启动（booting）态：骨架卡替代空白页，状态文案仍可读 */
+.app-shell__boot {
+  display: grid;
+  align-content: start;
+  gap: 1.15rem;
+  height: 100%;
+  padding: 2.5rem clamp(1rem, 4vw, 3rem);
+  overflow-y: auto;
+}
+
+.app-shell__boot-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- 空态 ---------- */
+
+.empty-state-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  /* flex-shrink:0：devices-view 是纵向 flex 容器，空态不能被压扁 */
+  flex-shrink: 0;
+  padding: 2.6rem 1.5rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  text-align: center;
+}
+
+.empty-state-card__icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.15rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--muted);
+}
+
+.empty-state-card__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.empty-state-card__desc {
+  max-width: 32rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.empty-state-card__action {
+  margin-top: 0.45rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty-state-card__action:hover {
+  filter: brightness(1.06);
+}
+
+.empty-state-card__action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -1,7 +1,7 @@
 import {
   base64ToKey,
   decryptPayload,
-  deriveLoginResponseKey,
+  deriveLoginWireKey,
   encryptPayload,
 } from "./api-crypto.js";
 import {
@@ -11,8 +11,11 @@ import {
   saveSessionEncryptionKey,
 } from "./api-session.js";
 import { notifySessionExpired } from "./auth-session-bridge.js";
+import { fetchWithLanFallback } from "./api-transport.js";
 
 export { clearSessionEncryptionKey, hasSessionEncryptionKey, saveSessionEncryptionKey };
+export { loginRequest, changePasswordRequest } from "./api-auth-http.js";
+export { fetchWithLanFallback };
 
 function isUnauthorizedResponse(response, result) {
   if (response.status === 401) {
@@ -58,67 +61,25 @@ export function isSessionExpiredError(error) {
   );
 }
 
-let preferredApiRoute = null; // "proxy" | "direct"
-
-function buildLanBackendUrl(url) {
-  if (typeof window === "undefined" || typeof url !== "string" || !url.startsWith("/api/")) {
-    return null;
+/** Decrypt session envelope, falling back to login-wire for public/401 responses. */
+export async function decryptApiEnvelope(envelope, { preferWire = false } = {}) {
+  if (!envelope?.encrypted) {
+    return envelope;
   }
 
-  // Backend listens on plain HTTP. HTTPS pages cannot call http://:3000 (mixed content),
-  // and the backend does not serve TLS on :3000.
-  if (window.location.protocol === "https:") {
-    return null;
-  }
-
-  const hostname = window.location.hostname;
-
-  if (!hostname) {
-    return null;
-  }
-
-  return `http://${hostname}:3000${url}`;
-}
-
-function resolveApiUrlByRoute(url, route) {
-  if (route === "direct") {
-    return buildLanBackendUrl(url) ?? url;
-  }
-  return url;
-}
-
-async function fetchWithLanFallback(url, options) {
-  const onViteDev =
-    typeof window !== "undefined" &&
-    window.location.port !== "" &&
-    String(window.location.port) !== "3000";
-  const primaryRoute = preferredApiRoute ?? "proxy";
-  const secondaryRoute = primaryRoute === "proxy" ? "direct" : "proxy";
-  const primaryUrl = resolveApiUrlByRoute(url, primaryRoute);
-
-  try {
-    const response = await fetch(primaryUrl, options);
-    preferredApiRoute = primaryRoute;
-    return response;
-  } catch (error) {
-    const fallbackUrl = resolveApiUrlByRoute(url, secondaryRoute);
-
-    if (
-      !(error instanceof TypeError) ||
-      !fallbackUrl ||
-      fallbackUrl === primaryUrl ||
-      (onViteDev && secondaryRoute === "direct")
-    ) {
-      throw error;
+  const sessionKey = getSessionEncryptionKey();
+  if (!preferWire && sessionKey) {
+    try {
+      return await decryptPayload(envelope, base64ToKey(sessionKey));
+    } catch {
+      // Unauthorized / public endpoints use the login-wire key.
     }
-
-    const response = await fetch(fallbackUrl, options);
-    preferredApiRoute = secondaryRoute;
-    return response;
   }
+
+  return decryptPayload(envelope, await deriveLoginWireKey());
 }
 
-async function parseResponseBody(response) {
+async function parseResponseBody(response, options = {}) {
   const rawText = await response.text();
   if (!rawText?.trim()) {
     throw new Error(
@@ -139,18 +100,7 @@ async function parseResponseBody(response) {
     );
   }
 
-  if (!envelope?.encrypted) {
-    return envelope;
-  }
-
-  const sessionKey = getSessionEncryptionKey();
-
-  if (!sessionKey) {
-    notifySessionExpired();
-    throw new SessionExpiredError("缺少会话加密密钥，请重新登录。");
-  }
-
-  return decryptPayload(envelope, base64ToKey(sessionKey));
+  return decryptApiEnvelope(envelope, { preferWire: Boolean(options.wireEncrypted) });
 }
 
 async function buildRequestBody(body, options = {}) {
@@ -158,8 +108,12 @@ async function buildRequestBody(body, options = {}) {
     return undefined;
   }
 
+  if (options.wireEncrypted) {
+    return JSON.stringify(await encryptPayload(body, await deriveLoginWireKey()));
+  }
+
   if (options.plainJson) {
-    return JSON.stringify(body);
+    throw new Error("明文 JSON 请求已禁用，请使用会话或 login-wire 加密。");
   }
 
   const sessionKey = getSessionEncryptionKey();
@@ -169,8 +123,7 @@ async function buildRequestBody(body, options = {}) {
     throw new SessionExpiredError("缺少会话加密密钥，请重新登录。");
   }
 
-  const envelope = await encryptPayload(body, base64ToKey(sessionKey));
-  return JSON.stringify(envelope);
+  return JSON.stringify(await encryptPayload(body, base64ToKey(sessionKey)));
 }
 
 export async function requestJson(url, options = {}) {
@@ -181,7 +134,7 @@ export async function requestJson(url, options = {}) {
     headers: options.body
       ? {
           "Content-Type": "application/json",
-          "X-Encrypted-Request": options.plainJson ? "0" : "1",
+          "X-Encrypted-Request": "1",
         }
       : {},
     body: await buildRequestBody(options.body, options),
@@ -190,7 +143,7 @@ export async function requestJson(url, options = {}) {
   let result = {};
 
   try {
-    result = await parseResponseBody(response);
+    result = await parseResponseBody(response, options);
   } catch (parseError) {
     if (parseError instanceof SessionExpiredError) {
       throw parseError;
@@ -229,107 +182,12 @@ export async function requestJson(url, options = {}) {
   return result;
 }
 
-export async function loginRequest(password) {
-  const response = await fetchWithLanFallback("/api/auth/login", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password }),
-  });
-
-  const envelope = await response.json();
-
-  if (!response.ok) {
-    throw new Error(envelope.message ?? envelope.error ?? "Login failed.");
-  }
-
-  if (!envelope?.encrypted) {
-    throw new Error("登录响应未加密。");
-  }
-
-  const loginKey = await deriveLoginResponseKey(password);
-  const result = await decryptPayload(envelope, loginKey);
-
-  if (result.encryptionKey) {
-    saveSessionEncryptionKey(result.encryptionKey);
-  } else {
-    clearSessionEncryptionKey();
-  }
-
-  return result;
-}
-
 export async function parseEncryptedFetchResponse(response) {
   const envelope = await response.json();
+  const result = await decryptApiEnvelope(envelope);
 
-  if (!envelope?.encrypted) {
-    if (isUnauthorizedResponse(response, envelope)) {
-      handleUnauthorizedResponse(response, envelope);
-    }
-
-    return envelope;
-  }
-
-  const sessionKey = getSessionEncryptionKey();
-
-  if (!sessionKey) {
-    notifySessionExpired();
-    throw new SessionExpiredError("缺少会话加密密钥，请重新登录。");
-  }
-
-  return decryptPayload(envelope, base64ToKey(sessionKey));
-}
-
-export async function changePasswordRequest(body, options = {}) {
-  const usePlainJson = options.plainJson || !hasSessionEncryptionKey();
-  const response = await fetchWithLanFallback("/api/auth/change-password", {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Encrypted-Request": usePlainJson ? "0" : "1",
-    },
-    body: usePlainJson
-      ? JSON.stringify(body)
-      : JSON.stringify(await encryptPayload(body, base64ToKey(getSessionEncryptionKey()))),
-  });
-
-  const envelope = await response.json();
-
-  if (!response.ok) {
-    const message = envelope.message ?? envelope.error ?? "Password change failed.";
-
-    if (envelope?.encrypted && usePlainJson) {
-      const loginKey = await deriveLoginResponseKey(body.currentPassword);
-      const decrypted = await decryptPayload(envelope, loginKey);
-      throw new Error(decrypted.message ?? message);
-    }
-
-    if (envelope?.encrypted && !usePlainJson) {
-      const result = await decryptPayload(envelope, base64ToKey(getSessionEncryptionKey()));
-      throw new Error(result.message ?? message);
-    }
-
-    throw new Error(message);
-  }
-
-  if (!envelope?.encrypted) {
-    return envelope;
-  }
-
-  if (!usePlainJson) {
-    const result = await decryptPayload(envelope, base64ToKey(getSessionEncryptionKey()));
-    if (result.encryptionKey) {
-      saveSessionEncryptionKey(result.encryptionKey);
-    }
-    return result;
-  }
-
-  const loginKey = await deriveLoginResponseKey(body.currentPassword);
-  const result = await decryptPayload(envelope, loginKey);
-
-  if (result.encryptionKey) {
-    saveSessionEncryptionKey(result.encryptionKey);
+  if (isUnauthorizedResponse(response, result)) {
+    handleUnauthorizedResponse(response, result);
   }
 
   return result;

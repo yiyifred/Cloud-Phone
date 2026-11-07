@@ -1,10 +1,11 @@
 /** Naive UI theme overrides aligned with Cloud Phone CSS variables */
 export const naiveThemeOverrides = {
   common: {
-    primaryColor: "#22c55e",
-    primaryColorHover: "#16a34a",
-    primaryColorPressed: "#15803d",
-    primaryColorSuppl: "#4ade80",
+    // 与 main.css 的 --primary 同步：#15803d 配白字 5.02:1（原 #22c55e 白字仅 2.28:1）
+    primaryColor: "#15803d",
+    primaryColorHover: "#166534",
+    primaryColorPressed: "#14532d",
+    primaryColorSuppl: "#15803d",
     borderRadius: "0.65rem",
     borderRadiusSmall: "0.55rem",
     fontSize: "13px",
@@ -13,6 +14,8 @@ export const naiveThemeOverrides = {
     heightSmall: "32px",
   },
   Button: {
+    // 主色按钮文字固定白色：#15803d 上 5.02:1，满足 AA
+    textColorPrimary: "#ffffff",
     borderRadiusMedium: "0.65rem",
     borderRadiusSmall: "0.55rem",
     fontWeightStrong: "600",

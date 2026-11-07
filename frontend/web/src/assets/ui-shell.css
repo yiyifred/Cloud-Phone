@@ -63,7 +63,7 @@
 
 .help-hint:hover,
 .help-hint:focus-visible {
-  color: var(--accent);
+  color: var(--accent-soft);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
@@ -147,7 +147,7 @@
 
 .panel-alert__action:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
-  color: var(--accent);
+  color: var(--accent-soft);
 }
 
 .form-label-row {
@@ -213,7 +213,7 @@
 .shell-tab--active {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
-  color: var(--accent);
+  color: var(--accent-soft);
   font-weight: 600;
 }
 
@@ -375,7 +375,7 @@
 }
 
 .mobile-bottom-nav__item--active {
-  color: var(--accent);
+  color: var(--accent-soft);
   font-weight: 600;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }

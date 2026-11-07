@@ -6,6 +6,7 @@ import "./assets/ui-shell.css";
 import "./assets/auth-page.css";
 import "./assets/mirror-settings.css";
 import "./assets/windows-desktop.css";
+import "./assets/skeleton.css";
 import { i18n, setI18nLocale } from "./i18n/index.js";
 import { initLocale } from "./i18n/locale-store.js";
 import { hydratePublicPreferences } from "./utils/local-persistence-state.js";

@@ -6,10 +6,15 @@ export const PUBLIC_API_PATHS = new Set([
   "/api/auth/session",
   "/api/auth/login",
   "/api/ping",
-  "/api/public/preferences",
 ]);
 
 export function isPublicApiPath(pathname, method) {
+  if (pathname === "/api/public/preferences") {
+    // Reading the theme is needed on the login screen; writing global state
+    // without a session let any LAN host rewrite it.
+    return method === "GET";
+  }
+
   if (PUBLIC_API_PATHS.has(pathname)) {
     return true;
   }

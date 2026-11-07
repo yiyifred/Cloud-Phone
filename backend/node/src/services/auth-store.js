@@ -8,7 +8,44 @@ import { BACKEND_DATA_PATH } from "../config/paths.js";
 const DATABASE_PATH = path.resolve(BACKEND_DATA_PATH, "cloud-phone.db");
 const KEY_PATH = path.resolve(BACKEND_DATA_PATH, "auth.key");
 
-fs.mkdirSync(BACKEND_DATA_PATH, { recursive: true });
+const DATA_DIRECTORY_MODE = 0o700;
+const DATA_FILE_MODE = 0o600;
+
+/**
+ * 启动即收敛数据目录与密钥/数据库文件权限。
+ *
+ * 为什么单独抽一个函数并且只在顶部调用一次：
+ * - mkdirSync 的 mode 只对「本次新建」的目录生效，存量目录仍是旧权限，必须 chmod 纠正；
+ * - 数据库文件由 sqlite 打开时按 umask 创建（常见 0644/0666），因此先用 0600 预创建一次，
+ *   让 sqlite 打开的是已有文件，避免出现权限过于宽松的窗口期；
+ * - Windows 没有 POSIX 权限位，chmod 会失败，这里只 warn 不 throw，加固动作不能阻止服务启动。
+ */
+function ensureSecurePermissions() {
+  try {
+    fs.mkdirSync(BACKEND_DATA_PATH, { recursive: true, mode: DATA_DIRECTORY_MODE });
+    fs.chmodSync(BACKEND_DATA_PATH, DATA_DIRECTORY_MODE);
+  } catch (error) {
+    console.warn("[auth] 数据目录权限加固失败（Windows 无权限位属正常）：", error?.message ?? error);
+  }
+
+  try {
+    // "a" 打开不会截断已有数据库；mode 仅在文件不存在时生效。
+    fs.closeSync(fs.openSync(DATABASE_PATH, "a", DATA_FILE_MODE));
+    fs.chmodSync(DATABASE_PATH, DATA_FILE_MODE);
+  } catch (error) {
+    console.warn("[auth] 数据库文件权限加固失败：", error?.message ?? error);
+  }
+
+  try {
+    if (fs.existsSync(KEY_PATH)) {
+      fs.chmodSync(KEY_PATH, DATA_FILE_MODE);
+    }
+  } catch (error) {
+    console.warn("[auth] 密钥文件权限加固失败：", error?.message ?? error);
+  }
+}
+
+ensureSecurePermissions();
 
 const database = new DatabaseSync(DATABASE_PATH);
 database.exec(`
@@ -134,7 +171,8 @@ function loadOrCreateEncryptionKey() {
   }
 
   const nextKey = crypto.randomBytes(32);
-  fs.writeFileSync(KEY_PATH, nextKey);
+  // 显式 0600：密钥一旦被同组/其他用户读到，加密的密码库与会话等同于明文。
+  fs.writeFileSync(KEY_PATH, nextKey, { mode: DATA_FILE_MODE });
   return nextKey;
 }
 

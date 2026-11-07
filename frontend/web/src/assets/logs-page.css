@@ -94,7 +94,7 @@
 
 .logs-page__badge--info {
   background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent);
+  color: var(--accent-soft);
 }
 
 .logs-page__badge--warn {

@@ -193,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
 
         networkExecutor.execute(() -> {
             try {
-                AuthApiClient.SessionStatus status = authApiClient.fetchSession(host, port);
+                AuthApiClient.SessionStatus status = authApiClient.fetchSession(MainActivity.this, host, port);
                 if (status.authenticated) {
                     mainHandler.post(() -> {
                         setAuthLoading(false);
@@ -214,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
                             textAuthIntro.setText(getString(R.string.auth_auto_signing_in)));
                     try {
                         AuthApiClient.AuthResult loginResult = authApiClient.login(
+                                MainActivity.this,
                                 host,
                                 port,
                                 savedPassword
@@ -263,6 +264,7 @@ public class MainActivity extends AppCompatActivity {
         networkExecutor.execute(() -> {
             try {
                 AuthApiClient.AuthResult result = authApiClient.login(
+                        MainActivity.this,
                         endpoint.host,
                         endpoint.port,
                         password
@@ -305,6 +307,7 @@ public class MainActivity extends AppCompatActivity {
         networkExecutor.execute(() -> {
             try {
                 AuthApiClient.AuthResult result = authApiClient.changePassword(
+                        MainActivity.this,
                         endpoint.host,
                         endpoint.port,
                         currentPassword,

@@ -1,7 +1,7 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { pipeline } from "node:stream/promises";
 
 import { APP_VERSION } from "../config/version.js";
 import { resolveAppOrientation } from "../services/device-app-orientation.js";
@@ -17,10 +17,31 @@ import {
 } from "../services/device-apps-mutate.js";
 import { runWithAdbLock } from "../services/adb-lock.js";
 import {
+  readProtectedBinaryBody,
   readProtectedJsonBody,
   sendProtectedBuffer,
   sendProtectedJson,
 } from "../utils/protected-http.js";
+
+/**
+ * service 层抛出的 4xx（目前是包名等入参校验，statusCode=400）必须映射为 HTTP 4xx，
+ * 否则前端把「参数非法」当成服务端故障，会误报错误并掩盖真实问题。
+ *
+ * @param {unknown} error
+ * @param {number} [fallback]
+ */
+function resolveErrorStatus(error, fallback = 500) {
+  const status = Number(/** @type {any} */ (error)?.statusCode);
+  return Number.isInteger(status) && status >= 400 && status < 500 ? status : fallback;
+}
+
+/**
+ * 安装包临时文件名必须不可预测：写入 tmpdir 期间若名字可猜，同机进程可抢先放置/抢占同名文件。
+ * 随机名 + 0600 同时消除「内容可被预先创建后读取」与「读到他人残留文件」两类问题。
+ */
+function createInstallTempPath() {
+  return path.join(os.tmpdir(), `cloud-phone-install-${crypto.randomBytes(16).toString("hex")}.apk`);
+}
 
 /**
  * @param {import("node:http").IncomingMessage} req
@@ -39,23 +60,22 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
 
   if (method === "PUT" && installMatch) {
     const serial = decodeURIComponent(installMatch[1]);
-    const tmpPath = path.join(os.tmpdir(), `cloud-phone-install-${Date.now()}.apk`);
+    const tmpPath = createInstallTempPath();
 
     try {
-      await pipeline(req, fs.createWriteStream(tmpPath));
-      const st = await fs.promises.stat(tmpPath);
+      const { buffer } = await readProtectedBinaryBody(req, res);
 
-      if (!st.size) {
+      if (!buffer.length) {
         sendProtectedJson(res, 400, {
           success: false,
           version: APP_VERSION,
           error: "install_empty_body",
           message: "安装包内容为空。",
         });
-        await safeUnlink(tmpPath);
         return true;
       }
 
+      await fs.promises.writeFile(tmpPath, buffer, { mode: 0o600 });
       const result = await installLocalApk(serial, tmpPath);
 
       sendProtectedJson(res, 200, {
@@ -65,10 +85,10 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
         ...result,
       });
     } catch (error) {
-      sendProtectedJson(res, 500, {
+      sendProtectedJson(res, resolveErrorStatus(error), {
         success: false,
         version: APP_VERSION,
-        error: "install_failed",
+        error: error?.code ?? "install_failed",
         message: error instanceof Error ? error.message : "安装失败",
       });
     } finally {
@@ -91,10 +111,10 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
         apps,
       });
     } catch (error) {
-      sendProtectedJson(res, 500, {
+      sendProtectedJson(res, resolveErrorStatus(error), {
         success: false,
         version: APP_VERSION,
-        error: "device_apps_list_failed",
+        error: error?.code ?? "device_apps_list_failed",
         message: error instanceof Error ? error.message : "读取应用列表失败",
       });
     }
@@ -120,10 +140,10 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
         "Content-Disposition": `attachment; filename="${filename}"`,
       });
     } catch (error) {
-      sendProtectedJson(res, 500, {
+      sendProtectedJson(res, resolveErrorStatus(error), {
         success: false,
         version: APP_VERSION,
-        error: "apk_pull_failed",
+        error: error?.code ?? "apk_pull_failed",
         message: error instanceof Error ? error.message : "导出 APK 失败",
       });
     } finally {
@@ -165,10 +185,10 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
         ...result,
       });
     } catch (error) {
-      sendProtectedJson(res, 500, {
+      sendProtectedJson(res, resolveErrorStatus(error), {
         success: false,
         version: APP_VERSION,
-        error: "freeze_failed",
+        error: error?.code ?? "freeze_failed",
         message: error instanceof Error ? error.message : "操作失败",
       });
     }
@@ -190,10 +210,10 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
         orientation,
       });
     } catch (error) {
-      sendProtectedJson(res, 500, {
+      sendProtectedJson(res, resolveErrorStatus(error), {
         success: false,
         version: APP_VERSION,
-        error: "orientation_failed",
+        error: error?.code ?? "orientation_failed",
         message: error instanceof Error ? error.message : "读取应用方向失败",
       });
     }
@@ -215,7 +235,7 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
         detail,
       });
     } catch (error) {
-      const code = error?.code === "package_not_found" ? 404 : 500;
+      const code = error?.code === "package_not_found" ? 404 : resolveErrorStatus(error);
 
       sendProtectedJson(res, code, {
         success: false,
@@ -254,10 +274,10 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
         ...result,
       });
     } catch (error) {
-      sendProtectedJson(res, 500, {
+      sendProtectedJson(res, resolveErrorStatus(error), {
         success: false,
         version: APP_VERSION,
-        error: "uninstall_failed",
+        error: error?.code ?? "uninstall_failed",
         message: error instanceof Error ? error.message : "卸载失败",
       });
     }

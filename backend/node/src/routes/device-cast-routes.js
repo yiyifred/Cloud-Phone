@@ -142,8 +142,10 @@ export async function handleDeviceCastRoute(req, res, method, pathname) {
     }
 
     try {
-      const url = new URL(req.url ?? "/", "http://127.0.0.1");
-      const sessionKey = url.searchParams.get("sessionKey") || undefined;
+      const body = await readProtectedJsonBody(req, res);
+      // sessionKey must live in the encrypted body (never query string).
+      const sessionKey =
+        typeof body.sessionKey === "string" && body.sessionKey ? body.sessionKey : undefined;
       logCastInfo(serial, "api.cast.stop", { sessionKey: sessionKey || serial });
       const stopped = await stopScrcpyCast(serial, { sessionKey });
 

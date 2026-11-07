@@ -6,6 +6,7 @@ import AuthLayer from "./AuthLayer.vue";
 import AuthPasswordModal from "./AuthPasswordModal.vue";
 import ConsoleLayout from "./ConsoleLayout.vue";
 import IconHelperGatePanel from "./IconHelperGatePanel.vue";
+import SkeletonCard from "./ui/SkeletonCard.vue";
 import { useAppFeedback } from "../composables/useAppFeedback.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useDevices } from "../composables/useDevices.js";
@@ -210,11 +211,13 @@ async function saveSettingsForm() {
       @login="handleLogin"
       @change-password="handlePasswordChange"
     />
-    <div
-      v-else-if="authState.booting"
-      class="app-shell__boot"
-    >
-      {{ authState.sessionStateText || "…" }}
+    <!-- 启动（booting）期间用骨架卡占位：状态文案保留可读，
+         骨架给出与控制台一致的布局预期，避免整页空白后突然撑开 -->
+    <div v-else-if="authState.booting" class="app-shell__boot" aria-busy="true">
+      <p class="app-shell__boot-status" role="status">
+        {{ authState.sessionStateText || "…" }}
+      </p>
+      <SkeletonCard :count="6" height="16rem" />
     </div>
     <ConsoleLayout
       v-else-if="authState.authenticated || authState.reauthenticating"

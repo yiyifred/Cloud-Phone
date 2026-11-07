@@ -2,9 +2,9 @@ import crypto from "node:crypto";
 
 import {
   AUTH_COOKIE_NAME,
-  AUTH_SESSION_DURATION_MS,
   DEFAULT_PASSWORD,
   PASSWORD_MIN_LENGTH,
+  getSessionDurationMs,
 } from "../config/auth.js";
 import { createSessionEncryptionKey } from "../utils/api-crypto.js";
 import { getAuthKeyMaterial, getPasswordRecord, savePasswordRecord } from "./auth-store.js";
@@ -34,7 +34,7 @@ export async function getAuthStatus(sessionToken) {
     requiresPasswordChange: !passwordRecord && hasActiveSession,
     sessionExpiresAt: hasActiveSession ? session?.expiresAt ?? null : null,
     passwordUpdatedAt: passwordRecord?.updatedAt ?? null,
-    encryptionKey: hasActiveSession ? record.encryptionKey.toString("base64") : null,
+    // Never return encryptionKey here — only via password-encrypted login/change-password.
   };
 }
 
@@ -128,22 +128,38 @@ export function revokeSessionToken(token) {
 }
 
 export function getClearSessionCookie() {
-  return serializeSessionCookie("", new Date(0));
+  return serializeSessionCookie("", new Date(0), {});
 }
 
-export function getSessionCookie(token) {
-  const expiresAt = new Date(Date.now() + AUTH_SESSION_DURATION_MS);
-  return serializeSessionCookie(token, expiresAt);
+/**
+ * @param {string} token
+ * @param {{ secure?: boolean, days?: number }} [options]
+ */
+export function getSessionCookie(token, options = {}) {
+  const days = options.days ?? 0;
+  const expiresAt = new Date(
+    Date.now() + (days > 0 ? days * 24 * 60 * 60 * 1000 : getSessionDurationMs()),
+  );
+  return serializeSessionCookie(token, expiresAt, options);
 }
 
-function serializeSessionCookie(token, expiresAt) {
-  return [
+function serializeSessionCookie(token, expiresAt, options) {
+  const maxAgeSeconds = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / 1000));
+  const parts = [
     `${AUTH_COOKIE_NAME}=${token}`,
     `Expires=${expiresAt.toUTCString()}`,
+    `Max-Age=${maxAgeSeconds}`,
     "Path=/",
     "HttpOnly",
     "SameSite=Lax",
-  ].join("; ");
+  ];
+
+  // Only over TLS: a Secure cookie on plain http is dropped by the browser.
+  if (options.secure) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
 }
 
 async function createPasswordRecord(password) {
@@ -179,7 +195,7 @@ async function derivePasswordHash(password, salt) {
 }
 
 function createSessionToken(passwordUpdatedAt) {
-  const expiresAt = new Date(Date.now() + AUTH_SESSION_DURATION_MS);
+  const expiresAt = new Date(Date.now() + getSessionDurationMs());
   const payload = Buffer.from(
     JSON.stringify({
       exp: expiresAt.toISOString(),
@@ -208,7 +224,7 @@ function verifySessionTokenInternal(token) {
 
   const [payload, signature] = token.split(".");
 
-  if (!payload || !signature || signPayload(payload) !== signature) {
+  if (!payload || !signature || !signatureMatches(payload, signature)) {
     return null;
   }
 
@@ -232,6 +248,18 @@ function verifySessionTokenInternal(token) {
   } catch {
     return null;
   }
+}
+
+/** Constant-time compare so a remote attacker cannot time the HMAC byte by byte. */
+function signatureMatches(payload, signature) {
+  const expected = Buffer.from(signPayload(payload), "utf8");
+  const actual = Buffer.from(String(signature), "utf8");
+
+  if (expected.length !== actual.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expected, actual);
 }
 
 function signPayload(payload) {

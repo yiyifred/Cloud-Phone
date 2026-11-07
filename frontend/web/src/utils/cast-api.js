@@ -9,11 +9,9 @@ export function startDeviceCast(serial, options = {}) {
 
 export function stopDeviceCast(serial, options = {}) {
   const sessionKey = options.sessionKey ? String(options.sessionKey) : "";
-  const query = sessionKey
-    ? `?sessionKey=${encodeURIComponent(sessionKey)}`
-    : "";
-  return requestJson(`/api/devices/${encodeURIComponent(serial)}/cast/stop${query}`, {
+  return requestJson(`/api/devices/${encodeURIComponent(serial)}/cast/stop`, {
     method: "DELETE",
+    body: sessionKey ? { sessionKey } : {},
     signal: options.signal,
   });
 }
