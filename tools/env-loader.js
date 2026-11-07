@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 const currentDirPath = path.dirname(fileURLToPath(import.meta.url));
 export const PROJECT_ROOT_PATH = path.resolve(currentDirPath, "..");
 
-const DEFAULT_HOST = "0.0.0.0";
+// Loopback by default: the API has no TLS of its own, so "0.0.0.0" meant every
+// LAN host could read cookies off the wire. Set HOST=0.0.0.0 explicitly in .env
+// when you really want LAN access (and terminate TLS in front of it).
+const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_BACKEND_PORT = 3000;
 const DEFAULT_FRONTEND_PORT = 5173;
 

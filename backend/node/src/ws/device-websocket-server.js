@@ -9,14 +9,60 @@ import {
   handleDeviceTerminalWebSocket,
   parseTerminalWebSocketPath,
 } from "../routes/device-terminal-routes.js";
-import { verifyWebSocketSession } from "../middleware/ws-auth.js";
+import { isAllowedWsOrigin, verifyWebSocketSession } from "../middleware/ws-auth.js";
 import { logCastInfo, logCastWarn } from "../services/scrcpy-cast/cast-logger.js";
+
+/** Terminal sockets spawn an adb shell each: a single session must not be able to fork-bomb the host. */
+const TERMINAL_MAX_PER_DEVICE = 4;
+const TERMINAL_MAX_TOTAL = 32;
+const CAST_MAX_TOTAL = 64;
+/** Client frames are control messages (touch/key/clipboard); 4 MiB is generous. */
+const WS_MAX_PAYLOAD_BYTES = 4 * 1024 * 1024;
+
+/** @type {Map<string, number>} */
+const terminalByDevice = new Map();
+let terminalTotal = 0;
+let castTotal = 0;
+
+function acquireTerminalSlot(serial) {
+  const current = terminalByDevice.get(serial) ?? 0;
+
+  if (current >= TERMINAL_MAX_PER_DEVICE || terminalTotal >= TERMINAL_MAX_TOTAL) {
+    return null;
+  }
+
+  terminalByDevice.set(serial, current + 1);
+  terminalTotal += 1;
+
+  return () => {
+    const remaining = (terminalByDevice.get(serial) ?? 1) - 1;
+    if (remaining <= 0) {
+      terminalByDevice.delete(serial);
+    } else {
+      terminalByDevice.set(serial, remaining);
+    }
+    terminalTotal = Math.max(0, terminalTotal - 1);
+  };
+}
+
+function acquireCastSlot() {
+  if (castTotal >= CAST_MAX_TOTAL) {
+    return null;
+  }
+
+  castTotal += 1;
+
+  return () => {
+    castTotal = Math.max(0, castTotal - 1);
+  };
+}
 
 export function setupDeviceWebSocket(server) {
   const wss = new WebSocketServer({
     noServer: true,
     // H.264 is already compressed; deflate adds CPU and latency on the hot path.
     perMessageDeflate: false,
+    maxPayload: WS_MAX_PAYLOAD_BYTES,
   });
 
   server.on("upgrade", async (request, socket, head) => {
@@ -29,11 +75,23 @@ export function setupDeviceWebSocket(server) {
       return;
     }
 
+    const serial = castRoute?.serial ?? terminalRoute?.serial ?? "unknown";
+
+    if (!isAllowedWsOrigin(request)) {
+      logCastWarn(serial, "ws.rejected", {
+        reason: "origin_not_allowed",
+        origin: request.headers.origin ?? null,
+        path: requestUrl.pathname,
+      });
+      socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
     const authorized = await verifyWebSocketSession(request);
 
     if (!authorized) {
-      const serial = castRoute?.serial ?? terminalRoute?.serial;
-      logCastWarn(serial ?? "unknown", "ws.rejected", {
+      logCastWarn(serial, "ws.rejected", {
         reason: "unauthorized",
         path: requestUrl.pathname,
       });
@@ -42,12 +100,22 @@ export function setupDeviceWebSocket(server) {
       return;
     }
 
-    const serial = castRoute?.serial ?? terminalRoute?.serial;
+    const release = terminalRoute ? acquireTerminalSlot(serial) : acquireCastSlot();
+
+    if (!release) {
+      logCastWarn(serial, "ws.rejected", { reason: "connection_limit", path: requestUrl.pathname });
+      socket.write("HTTP/1.1 429 Too Many Requests\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
     const channel = castRoute?.channel ?? "terminal";
 
     logCastInfo(serial, "ws.upgrade", { path: requestUrl.pathname, channel });
 
     wss.handleUpgrade(request, socket, head, (ws) => {
+      ws.once("close", release);
+
       if (terminalRoute) {
         handleDeviceTerminalWebSocket(ws, terminalRoute.serial);
         return;
