@@ -10,27 +10,86 @@
   --bg-input: rgba(255, 255, 255, 0.95);
   --bg-preview: #f1f5f9;
   --bg-image: #e2e8f0;
+  /* 投屏舞台固定浅深色：不随主题变化，避免画面四周一圈浅灰割裂观感 */
+  --bg-stage: #0b0f14;
   --line: rgba(15, 23, 42, 0.1);
   --line-strong: rgba(22, 163, 74, 0.35);
   --text: #0f172a;
   --muted: #475569;
   --text-muted: #475569;
-  --accent: #16a34a;
-  --accent-soft: #15803d;
+  /* --accent 同时被当按钮底色（白字）与图形强调色用：#16a34a 上白字仅 3.15:1，
+     统一压到 #15803d（白字 5.02:1）；纯图形用 --success 保持原色 */
+  --accent: #15803d;
+  --accent-soft: #166534;
   --accent-contrast: #ffffff;
   --success: #16a34a;
-  --success-soft: rgba(22, 163, 74, 0.12);
-  --primary: #16a34a;
-  --primary-strong: #15803d;
-  --primary-text: #f0fdf4;
+  /* 绿色拆成「图形色 / 文字色」：#16a34a 当文字在浅底上只有 2.89:1，不达 AA */
+  --success-text: #166534;
+  --success-soft: rgba(22, 163, 74, 0.1);
+  /* 主按钮底色压深到 #15803d：#16a34a 配白字仅 3.15:1，#15803d 配白字 5.02:1 */
+  --primary: #15803d;
+  --primary-strong: #166534;
+  --primary-text: #ffffff;
   --surface: rgba(255, 255, 255, 0.92);
   --surface-hover: rgba(15, 23, 42, 0.06);
   --danger: #e11d48;
-  --shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
+  /* 其它样式表已引用但从未定义的软色阶，补齐后 var() 不再整条落空 */
+  --bg-subtle: color-mix(in srgb, var(--bg-muted) 70%, var(--line) 30%);
+  --line-soft: color-mix(in srgb, var(--line) 60%, transparent);
+  --warning: #b45309;
   --overlay: rgba(15, 23, 42, 0.32);
   --blur: 16px;
-  --radius-lg: 1.25rem;
-  --radius-md: 0.9rem;
+
+  /* ---- 设计 token（v1.22.5 收敛：字号 7 阶 / 圆角 6 阶 / 阴影 3 阶） ---- */
+  /* 字号：只保留 7 个档位，新代码一律引用 token，避免再出现 26 种零散字号 */
+  --fs-2xs: 11px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --lh-tight: 1.25;
+  --lh-base: 1.5;
+  --lh-relaxed: 1.6;
+
+  /* 间距：4px 基数的 8 阶，仅补齐 token，不批量替换既有布局值 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 28px;
+  --sp-8: 32px;
+  --sp-9: 36px;
+  --sp-10: 40px;
+  --sp-11: 44px;
+  --sp-12: 48px;
+
+  /* 圆角：--radius-sm 之前从未定义，11 处 var(--radius-sm) 全部落空成直角 */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  /* 阴影从 --text 派生：浅色主题得到深阴影，深色主题自动反成浅色微光 */
+  --shadow-1: 0 1px 2px color-mix(in srgb, var(--text) 8%, transparent);
+  --shadow-2: 0 6px 16px color-mix(in srgb, var(--text) 10%, transparent);
+  --shadow-3: 0 16px 40px color-mix(in srgb, var(--text) 16%, transparent);
+  --shadow: var(--shadow-3);
+
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.25, 1);
+  /* 统一键盘焦点环：outline:none 的选择器必须补这层可见焦点 */
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+  --icon-sm: 14px;
+  --icon-md: 18px;
+  --icon-lg: 22px;
   --body-gradient:
     radial-gradient(circle at 0% 0%, rgba(34, 197, 94, 0.12), transparent 34%),
     radial-gradient(circle at 100% 0%, rgba(22, 163, 74, 0.08), transparent 30%),
@@ -46,7 +105,8 @@
   --bg-input: rgba(15, 23, 42, 0.65);
   --bg-preview: #0b1220;
   --bg-image: #020617;
-  --line: rgba(148, 163, 184, 0.18);
+  --bg-stage: #0b0f14;
+  --line: rgba(148, 163, 184, 0.24);
   --line-strong: rgba(34, 197, 94, 0.35);
   --text: #f8fafc;
   --muted: #94a3b8;
@@ -55,14 +115,24 @@
   --accent-soft: #4ade80;
   --accent-contrast: #052e16;
   --success: #22c55e;
-  --success-soft: rgba(34, 197, 94, 0.16);
+  /* 深底上的绿文字用亮绿：#16a34a 在 #0f172a 上仅约 4.1:1，#4ade80 约 9:1 */
+  --success-text: #4ade80;
+  --success-soft: rgba(34, 197, 94, 0.14);
   --primary: #22c55e;
-  --primary-strong: #16a34a;
+  --primary-strong: #4ade80;
+  /* 深色主按钮用深字压亮绿底（约 8:1）；白字在 #22c55e 上只有 2.28:1 */
   --primary-text: #052e16;
   --surface: rgba(15, 23, 42, 0.82);
   --surface-hover: rgba(148, 163, 184, 0.12);
   --danger: #fb7185;
-  --shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+  --bg-subtle: color-mix(in srgb, var(--bg-muted) 70%, var(--line) 30%);
+  --line-soft: color-mix(in srgb, var(--line) 60%, transparent);
+  --warning: #fbbf24;
+  /* 深色下 color-mix 派生的浅阴影几乎不可见，改为黑阴影 + 更亮描边让卡片浮起 */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-2: 0 8px 20px rgb(0 0 0 / 0.55);
+  --shadow-3: 0 20px 50px rgb(0 0 0 / 0.6);
+  --shadow: var(--shadow-3);
   --overlay: rgba(2, 6, 23, 0.65);
   --body-gradient:
     radial-gradient(circle at 0% 0%, rgba(34, 197, 94, 0.14), transparent 32%),
@@ -156,7 +226,7 @@ input:focus-visible {
   height: 2.5rem;
   border-radius: 0.85rem;
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .sidebar__brand strong {
@@ -238,7 +308,7 @@ input:focus-visible {
 .sidebar__tab--active {
   border-color: var(--line-strong);
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 25%, transparent);
 }
 
@@ -289,7 +359,7 @@ input:focus-visible {
 
 .theme-toggle__option--active {
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
   font-weight: 600;
 }
 
@@ -420,7 +490,7 @@ input:focus-visible {
 
 .eyebrow {
   margin: 0 0 0.4rem;
-  color: var(--accent);
+  color: var(--success-text);
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -440,7 +510,7 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--bg-elevated);
-  color: var(--success);
+  color: var(--success-text);
   font-size: 0.82rem;
   font-weight: 600;
   white-space: nowrap;
@@ -509,7 +579,7 @@ h2 {
 }
 
 .devices-toolbar__adb {
-  color: var(--success);
+  color: var(--success-text);
   font-weight: 600;
 }
 
@@ -544,13 +614,15 @@ h2 {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--accent);
+  color: var(--success-text);
   text-decoration: underline;
 }
 
 .device-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  /* 上限 320px：原来 minmax(260px, 1fr) 在设备少时会把卡片拉到整行宽，右侧留大片空白 */
+  grid-template-columns: repeat(auto-fill, minmax(240px, 320px));
+  justify-content: center;
   gap: 1.15rem;
   align-content: start;
   padding-right: 0.2rem;
@@ -576,7 +648,8 @@ h2 {
 
 .device-card--clickable:hover {
   border-color: var(--line-strong);
-  box-shadow: 0 22px 38px rgb(2 6 23 / 18%);
+  /* 悬停阴影从 --text 派生：深色主题下不会变成一块看不见的黑影 */
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--text) 18%, transparent);
   transform: translateY(-1px);
 }
 
@@ -591,7 +664,9 @@ h2 {
 
 .device-card__preview {
   position: relative;
-  aspect-ratio: 9 / 16;
+  /* 9/16 对平板类设备过高；3/4 配合 object-fit: contain 保证任何比例都不被裁 */
+  aspect-ratio: 3 / 4;
+  min-height: 12rem;
   background: var(--bg-preview);
 }
 
@@ -629,7 +704,7 @@ h2 {
 
 .device-card__status--online {
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .device-card__status--offline {
@@ -721,6 +796,11 @@ h2 {
 .device-gallery-menu button:focus-visible {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   outline: none;
+}
+
+/* 菜单项去掉了 outline，用 focus-ring 补回可见焦点 */
+.device-gallery-menu button:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .device-gallery-menu__danger {
@@ -912,12 +992,12 @@ h2 {
 .device-workspace__action--menu-open:not(:disabled) {
   border-color: color-mix(in srgb, var(--success) 55%, var(--line));
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .device-workspace__action--menu-open:not(:disabled) .device-workspace__action-icon {
   background: color-mix(in srgb, var(--success) 18%, transparent);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .device-workspace__action {
@@ -982,7 +1062,7 @@ h2 {
 .device-workspace__action:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--success) 45%, var(--line));
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--success) 20%, transparent),
     0 8px 16px color-mix(in srgb, var(--success) 10%, transparent);
@@ -990,7 +1070,7 @@ h2 {
 
 .device-workspace__action:hover:not(:disabled) .device-workspace__action-icon {
   background: color-mix(in srgb, var(--success) 18%, transparent);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .device-workspace__action:disabled {
@@ -1011,14 +1091,14 @@ h2 {
 .device-workspace__action--hold.device-workspace__action--pressed:not(:disabled) {
   border-color: var(--success);
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .device-workspace__action--hold:active:not(:disabled) .device-workspace__action-icon,
 .device-workspace__action--hold.device-workspace__action--pressed:not(:disabled)
   .device-workspace__action-icon {
   background: color-mix(in srgb, var(--success) 28%, transparent);
-  color: var(--success);
+  color: var(--success-text);
   transform: scale(0.94);
 }
 
@@ -1223,7 +1303,8 @@ h2 {
   min-height: 0;
   align-items: center;
   justify-content: center;
-  background: var(--bg-preview);
+  /* 投屏区一律用固定深色舞台，不再跟随主题变成浅灰背景 */
+  background: var(--bg-stage);
   isolation: isolate;
 }
 
@@ -1247,7 +1328,13 @@ h2 {
 }
 
 .device-cast-viewport:focus {
+  /* 舞台本身是巨大容器，保留 outline:none，避免 2px 外框被父级 overflow 裁掉 */
   outline: none;
+}
+
+/* 但键盘 Tab 进入舞台时必须有可见焦点：用内阴影画环，不会被 overflow:hidden 裁切 */
+.device-cast-viewport:focus-visible {
+  box-shadow: inset var(--focus-ring);
 }
 
 .device-cast-viewport__stage {
@@ -1285,7 +1372,7 @@ h2 {
   height: auto;
   max-width: 100%;
   max-height: 100%;
-  background: #000;
+  background: var(--bg-stage);
 }
 
 .device-cast-viewport__canvas--interactive {
@@ -1496,7 +1583,9 @@ h2 {
 
 .workspace-left__select:focus-visible {
   border-color: var(--line-strong);
+  /* 同样去掉过 outline，补 token 焦点环 */
   outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .workspace-left__btn {
@@ -1598,7 +1687,10 @@ h2 {
 }
 
 .field__select:focus-visible {
+  /* 原生 select 去掉了 outline，这里补 token 焦点环，否则键盘用户完全看不到焦点 */
   outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }
 
 .settings-meta {
@@ -1675,6 +1767,10 @@ h2 {
   padding: 1.25rem;
   background: var(--overlay);
   backdrop-filter: blur(10px);
+  /* 弹窗内容超出视口时可滚动；100dvh 避免移动端地址栏把内容顶出屏幕 */
+  max-height: 100dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .modal-layer--auth {
@@ -1742,7 +1838,7 @@ h2 {
 }
 
 .auth-stage__card--hint h3 {
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .auth-stage__steps {
@@ -1769,7 +1865,7 @@ h2 {
 }
 
 .auth-stage__step span {
-  color: var(--accent);
+  color: var(--success-text);
   font-size: 0.8rem;
   text-align: right;
 }
@@ -1787,6 +1883,10 @@ h2 {
   background: var(--bg-elevated);
   backdrop-filter: blur(var(--blur));
   box-shadow: var(--shadow);
+  /* 小屏 / 横屏时弹窗不能顶出视口，用 dvh 而非 vh（移动端地址栏会吃掉 100vh） */
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .auth-modal__brand {
@@ -1797,7 +1897,7 @@ h2 {
   margin-bottom: 1rem;
   border-radius: 1rem;
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .auth-modal__brand .app-icon {
@@ -1842,6 +1942,12 @@ h2 {
   color: var(--text);
 }
 
+/* input 自身 outline:none，焦点环画在外层胶囊上，保证输入框有可见焦点 */
+.field__control:focus-within {
+  box-shadow: var(--focus-ring);
+  border-color: var(--line-strong);
+}
+
 .field__control--readonly {
   opacity: 0.85;
 }
@@ -1871,7 +1977,7 @@ h2 {
 }
 
 .form-meta__state {
-  color: var(--accent);
+  color: var(--success-text);
   font-weight: 500;
 }
 
@@ -1903,7 +2009,7 @@ code {
   padding: 0.12rem 0.4rem;
   border-radius: 0.4rem;
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
   font-size: 0.9em;
 }
 
@@ -2075,8 +2181,9 @@ code {
   padding: 0 0.85rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-contrast, #fff);
+  /* 白字压 #16a34a 只有 3.15:1，改用 --primary(#15803d) 达到 5.02:1 */
+  background: var(--primary);
+  color: var(--primary-text, #fff);
   cursor: pointer;
 }
 
@@ -2162,8 +2269,8 @@ code {
 }
 
 .device-files__action-btn:hover:not(:disabled) {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--success-text);
+  border-color: var(--success);
   background: var(--bg-muted);
 }
 
@@ -2201,7 +2308,7 @@ code {
 }
 
 .device-files__row--dir .device-files__entry-icon {
-  color: var(--accent);
+  color: var(--success-text);
 }
 
 .device-files__entry-name {
@@ -2672,7 +2779,7 @@ code {
 }
 
 .device-terminal__status--connected {
-  color: var(--accent);
+  color: var(--success-text);
 }
 
 .device-terminal__status--error {
@@ -2772,6 +2879,8 @@ code {
     width: 42%;
     min-width: 7.5rem;
     aspect-ratio: auto;
+    /* 行内布局不需要 12rem 的竖屏占位，避免卡片被撑高 */
+    min-height: 7.5rem;
     flex: 0 0 auto;
   }
 
@@ -2831,6 +2940,15 @@ code {
   .modal-layer {
     align-items: flex-end;
     padding: 0.75rem;
+  }
+
+  /* ≤560px：弹窗贴底成 sheet，只留顶部圆角，拇指可达且不挡顶部内容 */
+  .modal-layer > :not(.auth-stage) {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    border-radius: 20px 20px 0 0;
+    overflow: auto;
+    overscroll-behavior: contain;
   }
 
   .modal-layer--auth {

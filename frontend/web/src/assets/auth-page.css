@@ -45,7 +45,7 @@
   height: 2.65rem;
   border-radius: 0.85rem;
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .auth-page__brand-icon .app-icon {
@@ -190,7 +190,7 @@
 }
 
 .auth-card-shell__step--active .auth-card-shell__step-label {
-  color: var(--accent);
+  color: var(--accent-soft);
 }
 
 .auth-card-shell__body {

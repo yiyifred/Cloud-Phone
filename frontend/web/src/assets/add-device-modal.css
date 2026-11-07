@@ -286,7 +286,7 @@
 }
 
 .add-device-modal__usb-state--ok {
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .add-device-modal__usb-state--warn {
@@ -773,7 +773,7 @@
 .apple-wizard__progress-value {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-soft);
 }
 
 .apple-wizard__progress-track {
