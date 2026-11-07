@@ -50,6 +50,19 @@ function backendHealthPlugin() {
 
 export default defineConfig({
   plugins: [vue(), basicSsl(), backendHealthPlugin()],
+  define: {
+      // vue-i18n 的 esm-bundler 版本把这些能力开关留给构建方定义：不定义时走的是
+      // 非 JIT 分支，消息在运行时用 new Function 拼装，会被 CSP 的 script-src 拦死
+      // （现象是整页白屏、控制台只有一条 EvalError）。开启 JIT 后由 AST 直接组装
+      // 渲染函数，全程不 eval，才能在不开 'unsafe-eval' 的前提下正常显示文案。
+      __INTLIFY_JIT_COMPILATION__: true,
+      __INTLIFY_DROP_MESSAGE_COMPILER__: false,
+      __INTLIFY_PROD_DEVTOOLS__: false,
+      __VUE_I18N_FULL_INSTALL__: true,
+      __VUE_I18N_LEGACY_API__: false,
+      __VUE_PROD_DEVTOOLS__: false,
+      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+  },
   server: {
     host,
     port: frontendPort,
