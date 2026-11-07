@@ -1,13 +1,16 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { MonitorSmartphone } from "lucide-vue-next";
 
 import AddDeviceModal from "./AddDeviceModal.vue";
 import AppIcon from "./AppIcon.vue";
 import DeviceCard from "./DeviceCard.vue";
 import DeviceGalleryContextMenu from "./DeviceGalleryContextMenu.vue";
+import EmptyState from "./ui/EmptyState.vue";
 import PageHeader from "./ui/PageHeader.vue";
 import PanelAlert from "./ui/PanelAlert.vue";
+import SkeletonCard from "./ui/SkeletonCard.vue";
 import { useAppFeedback } from "../composables/useAppFeedback.js";
 import { getErrorMessage } from "../utils/api.js";
 import { disconnectWirelessDevice } from "../utils/devices-api.js";
@@ -54,6 +57,9 @@ const refreshLabel = computed(() => formatRefreshTime(props.lastRefreshedAt));
 const showEmptyState = computed(
   () => !props.devices.length && !props.loading && !props.error,
 );
+// 首屏加载（无任何数据可展示）时用骨架卡占位：既有内容尺寸提示，
+// 也避免空白面板在数据回来时突然撑开造成跳版
+const showSkeleton = computed(() => Boolean(props.loading) && !props.devices.length && !props.error);
 const statusText = computed(() => {
   if (props.loading && !props.devices.length) {
     return t("devices.loading");
@@ -168,10 +174,21 @@ async function handleDisconnectDevice() {
       :message="t('devices.offlineHint', { count: summary.offline })"
     />
 
-    <div v-if="showEmptyState" class="empty-state">
-      <p>{{ t("devices.notFound") }}</p>
-      <span>{{ t("devices.connectHint") }}</span>
-    </div>
+    <SkeletonCard
+      v-if="showSkeleton"
+      :count="6"
+      height="14rem"
+      :label="t('devices.loading')"
+    />
+
+    <EmptyState
+      v-else-if="showEmptyState"
+      :icon="MonitorSmartphone"
+      :title="t('devices.notFound')"
+      :description="t('devices.connectHint')"
+      :action-label="t('devices.addDevice')"
+      @action="showAddDeviceModal = true"
+    />
 
     <div v-else-if="devices.length" class="devices-view__gallery-wrap">
       <div class="device-gallery">

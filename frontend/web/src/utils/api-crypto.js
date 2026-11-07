@@ -38,6 +38,14 @@ export async function deriveLoginResponseKey(password) {
   return derivePasswordEnvelopeKey(password, "login-response-v1");
 }
 
+export async function deriveLoginWireKey() {
+  return derivePasswordEnvelopeKey("cloud-phone", "login-request-wire-v1");
+}
+
+export async function deriveLoginRequestKey(password) {
+  return derivePasswordEnvelopeKey(password, "login-request-v1");
+}
+
 export async function encryptPayload(value, keyBytes) {
   requireWebCryptoSubtle();
   const iv = crypto.getRandomValues(new Uint8Array(12));
