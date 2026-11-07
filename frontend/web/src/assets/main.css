@@ -275,6 +275,9 @@ input:focus-visible {
   font-size: 0.9rem;
   line-height: 1.2;
   font-weight: 500;
+  /* ≤900px 侧栏变横排后可用宽度只够一行，按钮文字不能折行（曾把「退出登录」
+     拆成竖排四个字） */
+  white-space: nowrap;
 }
 
 .sidebar__tab .app-icon {
@@ -318,6 +321,7 @@ input:focus-visible {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .sidebar__logout .app-icon {
@@ -2016,20 +2020,34 @@ code {
 @media (max-width: 900px) {
   .console-layout {
     grid-template-columns: 1fr;
+    /* 单列后行是自动高：显式写 auto + minmax(0,1fr) 并关掉拉伸分配，
+       否则 grid 的 align-content: stretch 会把「侧栏」这一行也拉高
+       （768 宽时顶部导航曾被撑到 425px，正文被挤到屏幕下半截） */
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
   }
 
   .sidebar {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
     border-right: 0;
     border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    display: none;
   }
 
   .sidebar__tabs {
-    flex: initial;
+    flex: 0 0 auto;
     grid-auto-flow: column;
     grid-auto-columns: max-content;
+    gap: 0.35rem;
   }
 
   .sidebar__footer {
@@ -2042,6 +2060,7 @@ code {
 
   .main-panel {
     padding: 1.25rem;
+    min-height: 0;
   }
 }
 
