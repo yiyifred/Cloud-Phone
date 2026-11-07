@@ -224,6 +224,16 @@ images/readme/
 - 工具：`tools/build-scrcpy-server.mjs`、`compare-scrcpy-upstream.mjs`、`sync-scrcpy-from-upstream.mjs`、`build-scrcpy.mjs`、`download-scrcpy.mjs`、`sync-scrcpy-source.mjs`
 - 已移除 OTG / UHID 投屏模式；当前仅**镜像**与**摄像头**
 
+### 安全加固（1.23.0）
+
+- **登录防爆破**：按 IP 5 次/5 分钟锁 15 分钟并指数退避到 60 分钟，全局 20 次/10 分钟；命中返回 `429` + `Retry-After`，登录成功即清桶
+- **会话 Cookie**：`Max-Age` 默认 30 天（`AUTH_SESSION_DAYS` 可配）、`HttpOnly`、`SameSite=Lax`，经 HTTPS 访问时自动加 `Secure`；签名比较改恒时比较
+- **请求边界**：JSON 请求体上限 1 MiB、上传 256 MiB（硬上限 1 GiB），超限直接 `413`；HTTP 服务器设置 `requestTimeout` / `headersTimeout` / `keepAliveTimeout`
+- **来源校验**：CORS 走显式白名单；WebSocket 握手校验 `Origin`，并加 `maxPayload` 4 MiB 与并发上限（终端 4 / 设备 32 / 投屏 64）
+- **数据与日志**：数据目录 `0700`、`auth.key` 与数据库 `0600`；操作日志新增 `actor` 列，`message` / `details` 超长自动截断
+- **设备应用**：`packageName` 在进入 `adb shell` 前按白名单正则校验，非法直接 `400`；安装临时包随机名 + `0600`
+- **前端交付**：统一注入 CSP / XFO / nosniff / Referrer-Policy / Permissions-Policy 响应头；自签证书落盘复用（`.tls/`，`0700`/`0600`）
+
 更细的版本记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---

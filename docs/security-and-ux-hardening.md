@@ -359,7 +359,7 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 - WCAG 2.1 AA：正文 4.5:1，大字 3:1，触控目标 44×44
 - scrcpy releases（4.1 / 5.0 增量）、ws-scrcpy、escrcpy、DeviceFarmer STF、Genymobile scrcpy
 
-## 11. 实施进展（v1.23 第一批，已落地未提交）
+## 11. 实施进展（v1.23.0）
 
 ### 11.1 落地内容
 
@@ -381,6 +381,8 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 | U-01 画面变形 | canvas 盒按源宽高比精确设置并居中，触摸换算退化为 0 修正 | utils/canvas-fit.js（新）、utils/ws-scrcpy-annexb-player.js:41-43,146,294 |
 | U-05 骨架与空态 | SkeletonCard / EmptyState + 1.4s shimmer | components/ui/*.vue、assets/skeleton.css |
 | U-06/U-20 | 画廊 minmax(240,320) 居中、预览 3/4；弹窗 max-height + 小屏底部 sheet | assets/main.css:622,666,1757,2944 |
+| U-11 平板断点 | 侧栏 425px → 140px（768 宽实测），按钮不再按字折行，四档无横向溢出 | assets/main.css @media (max-width: 900px) |
+| S-15b CSP 兼容 | 开启 vue-i18n JIT，消息不再运行时 new Function，CSP 保持无 'unsafe-eval' | frontend/web/vite.config.js |
 
 ### 11.2 验证记录（本机实跑）
 
