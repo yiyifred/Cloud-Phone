@@ -33,8 +33,9 @@ Thumbs.db
 assistant/
 
 frontend/android/.idea/
+
+# 自签 TLS 私钥与固定证书（首次生成后长期复用，绝不入库）
+frontend/web/.tls/
 tools/test-scrcpy-cast/
 tools/test-scrcpy-cast.mjs
 tools/_split_controller_camera.py
-
-package-lock.json

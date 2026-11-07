@@ -2,6 +2,11 @@ import crypto from "node:crypto";
 
 const ENVELOPE_VERSION = 1;
 
+/**
+ * Fixed salt on purpose: the envelope must be derivable by a client that only
+ * knows the password (login response). It buys obfuscation, not secrecy — see
+ * the note in protected-http.js. Confidentiality is TLS's job.
+ */
 export function derivePasswordEnvelopeKey(password, purpose) {
   return crypto.pbkdf2Sync(String(password), `cloud-phone:${purpose}`, 100_000, 32, "sha256");
 }
