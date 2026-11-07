@@ -2,7 +2,6 @@ import {
   clearSessionEncryptionKey,
   hasSessionEncryptionKey,
   requestJson,
-  saveSessionEncryptionKey,
 } from "../utils/api.js";
 import { resetSessionExpiredGate } from "../utils/auth-session-bridge.js";
 import { logInfo } from "../utils/app-event-logger.js";
@@ -24,10 +23,7 @@ export function createCookieSessionRestorer({ syncAuthState, sessionValidText })
         return false;
       }
 
-      if (result.encryptionKey) {
-        saveSessionEncryptionKey(result.encryptionKey);
-      }
-
+      // Session payload is encrypted with the existing session key; key is never resent in cleartext.
       if (!hasSessionEncryptionKey()) {
         return false;
       }

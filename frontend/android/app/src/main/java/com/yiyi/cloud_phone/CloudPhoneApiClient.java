@@ -152,18 +152,18 @@ public final class CloudPhoneApiClient {
     }
 
     public static byte[] downloadFile(Context context, String host, int port, String serial, String path) throws Exception {
-        String encoded = Uri.encode(path, StandardCharsets.UTF_8.name());
-        String apiPath = "/api/devices/" + encSerial(serial) + "/files/download?path=" + encoded;
-        return requestProtectedRaw(context, host, port, apiPath);
+        JSONObject body = new JSONObject();
+        body.put("path", path);
+        String apiPath = "/api/devices/" + encSerial(serial) + "/files/download";
+        return requestProtectedRawPost(context, host, port, apiPath, body);
     }
 
     public static JSONObject uploadFile(
             Context context, String host, int port, String serial,
             String devicePath, java.io.InputStream bodyStream
     ) throws Exception {
-        String encoded = Uri.encode(devicePath, StandardCharsets.UTF_8.name());
-        String apiPath = "/api/devices/" + encSerial(serial) + "/files/upload?path=" + encoded;
-        return requestProtectedUploadJson(context, host, port, apiPath, bodyStream);
+        String apiPath = "/api/devices/" + encSerial(serial) + "/files/upload";
+        return requestProtectedUploadJson(context, host, port, apiPath, bodyStream, devicePath);
     }
 
     // ---- App Manager ----
@@ -187,7 +187,7 @@ public final class CloudPhoneApiClient {
             Context context, String host, int port, String serial, java.io.InputStream apkStream
     ) throws Exception {
         return requestProtectedUploadJson(context, host, port,
-                "/api/devices/" + encSerial(serial) + "/apps/install", apkStream);
+                "/api/devices/" + encSerial(serial) + "/apps/install", apkStream, null);
     }
 
     public static JSONObject setAppFrozen(
@@ -373,7 +373,7 @@ public final class CloudPhoneApiClient {
             connection.setReadTimeout(20000);
             connection.setInstanceFollowRedirects(true);
 
-            if ("POST".equals(method) && plainBody != null) {
+            if (plainBody != null && ("POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method))) {
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
                 connection.setRequestProperty("X-Encrypted-Request", "1");
@@ -391,7 +391,14 @@ public final class CloudPhoneApiClient {
             ));
 
             if (envelope.optBoolean("encrypted")) {
-                JSONObject decrypted = ApiCrypto.decryptPayload(envelope, keyBytes);
+                JSONObject decrypted;
+                try {
+                    decrypted = ApiCrypto.decryptPayload(envelope, keyBytes);
+                } catch (Exception decryptError) {
+                    byte[] wireKey = ApiCrypto.derivePasswordEnvelopeKey(
+                            "cloud-phone", "login-request-wire-v1");
+                    decrypted = ApiCrypto.decryptPayload(envelope, wireKey);
+                }
                 if (code >= 400 && !decrypted.optBoolean("success", false)) {
                     throw new IOException(decrypted.optString("message", "HTTP " + code));
                 }
@@ -413,6 +420,7 @@ public final class CloudPhoneApiClient {
     ) throws Exception {
         String sessionKey = SessionKeyStore.load(context);
         if (sessionKey.isEmpty()) throw new IOException("missing_session_key");
+        byte[] keyBytes = ApiCrypto.keyFromBase64(sessionKey);
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL("http://" + host + ":" + port + path).openConnection();
@@ -420,79 +428,60 @@ public final class CloudPhoneApiClient {
             conn.setConnectTimeout(8000);
             conn.setReadTimeout(30000);
             int code = conn.getResponseCode();
-            if (code >= 400) {
-                String body = readStream(code >= 400 ? conn.getErrorStream() : conn.getInputStream());
-                throw new IOException(new JSONObject(body).optString("message", "HTTP " + code));
-            }
-            return readBytes(conn.getInputStream());
-        } finally {
-            if (conn != null) conn.disconnect();
-        }
-    }
-
-    static byte[] requestProtectedBinary(
-            Context context, String host, int port, String path,
-            String method, InputStream bodyStream
-    ) throws Exception {
-        String sessionKey = SessionKeyStore.load(context);
-        if (sessionKey.isEmpty()) throw new IOException("missing_session_key");
-        HttpURLConnection conn = null;
-        try {
-            conn = (HttpURLConnection) new URL("http://" + host + ":" + port + path).openConnection();
-            conn.setRequestMethod(method);
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(120000);
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/octet-stream");
-            conn.setChunkedStreamingMode(8192);
-            try (java.io.OutputStream out = conn.getOutputStream()) {
-                byte[] buf = new byte[8192];
-                int len;
-                while ((len = bodyStream.read(buf)) != -1) out.write(buf, 0, len);
-            }
-            int code = conn.getResponseCode();
             String resp = readStream(code >= 400 ? conn.getErrorStream() : conn.getInputStream());
-            if (code >= 400) throw new IOException(new JSONObject(resp).optString("message", "HTTP " + code));
+            JSONObject envelope = new JSONObject(resp);
+            if (envelope.optBoolean("encrypted")) {
+                JSONObject dec;
+                try {
+                    dec = ApiCrypto.decryptPayload(envelope, keyBytes);
+                } catch (Exception decryptError) {
+                    byte[] wireKey = ApiCrypto.derivePasswordEnvelopeKey(
+                            "cloud-phone", "login-request-wire-v1");
+                    dec = ApiCrypto.decryptPayload(envelope, wireKey);
+                }
+                if (code >= 400 && !dec.optBoolean("success", false)) {
+                    throw new IOException(dec.optString("message", "HTTP " + code));
+                }
+                String data = dec.optString("data", "");
+                if (data.isEmpty()) throw new IOException("missing_encrypted_binary");
+                return java.util.Base64.getDecoder().decode(data);
+            }
+            if (code >= 400) throw new IOException(envelope.optString("message", "HTTP " + code));
             return resp.getBytes(StandardCharsets.UTF_8);
         } finally {
             if (conn != null) conn.disconnect();
         }
     }
 
+    static byte[] requestProtectedRawPost(
+            Context context, String host, int port, String path, JSONObject plainBody
+    ) throws Exception {
+        JSONObject dec = requestProtectedJson(context, host, port, path, "POST", plainBody);
+        String data = dec.optString("data", "");
+        if (data.isEmpty()) throw new IOException("missing_encrypted_binary");
+        return java.util.Base64.getDecoder().decode(data);
+    }
+
     public static JSONObject requestProtectedUploadJson(
-            Context context, String host, int port, String path, InputStream bodyStream
+            Context context, String host, int port, String path, InputStream bodyStream, String devicePath
     ) throws Exception {
         String sessionKey = SessionKeyStore.load(context);
         if (sessionKey.isEmpty()) throw new IOException("missing_session_key");
         byte[] keyBytes = ApiCrypto.keyFromBase64(sessionKey);
-        HttpURLConnection conn = null;
-        try {
-            conn = (HttpURLConnection) new URL("http://" + host + ":" + port + path).openConnection();
-            conn.setRequestMethod("PUT");
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(120000);
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/octet-stream");
-            conn.setChunkedStreamingMode(8192);
-            try (java.io.OutputStream out = conn.getOutputStream()) {
-                byte[] buf = new byte[8192];
-                int len;
-                while ((len = bodyStream.read(buf)) != -1) out.write(buf, 0, len);
-            }
-            int code = conn.getResponseCode();
-            JSONObject envelope = new JSONObject(readStream(
-                    code >= 400 ? conn.getErrorStream() : conn.getInputStream()));
-            if (envelope.optBoolean("encrypted")) {
-                JSONObject dec = ApiCrypto.decryptPayload(envelope, keyBytes);
-                if (code >= 400 && !dec.optBoolean("success", false))
-                    throw new IOException(dec.optString("message", "HTTP " + code));
-                return dec;
-            }
-            if (code >= 400) throw new IOException(envelope.optString("message", "HTTP " + code));
-            return envelope;
-        } finally {
-            if (conn != null) conn.disconnect();
+
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int len;
+        while ((len = bodyStream.read(buf)) != -1) bos.write(buf, 0, len);
+        String data = java.util.Base64.getEncoder().encodeToString(bos.toByteArray());
+
+        JSONObject plain = new JSONObject();
+        plain.put("data", data);
+        if (devicePath != null && !devicePath.isEmpty()) {
+            plain.put("path", devicePath);
         }
+
+        return requestProtectedJson(context, host, port, path, "PUT", plain);
     }
 
     private static byte[] readBytes(InputStream stream) throws IOException {

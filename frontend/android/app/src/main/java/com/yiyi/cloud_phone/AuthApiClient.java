@@ -1,5 +1,7 @@
 package com.yiyi.cloud_phone;
 
+import android.content.Context;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -58,8 +60,11 @@ final class AuthApiClient {
         }
     }
 
-    SessionStatus fetchSession(String host, int port) throws Exception {
+    SessionStatus fetchSession(Context context, String host, int port) throws Exception {
         JSONObject body = requestJson(host, port, "/api/auth/session", "GET", null);
+        if (body.optBoolean("encrypted")) {
+            body = decryptSessionOrWire(context, body);
+        }
         String expiresAt = body.optString("sessionExpiresAt", "");
         if (expiresAt.isEmpty() && !body.isNull("sessionExpiresAt")) {
             expiresAt = String.valueOf(body.opt("sessionExpiresAt"));
@@ -72,48 +77,81 @@ final class AuthApiClient {
         );
     }
 
-    AuthResult login(String host, int port, String password) throws Exception {
+    AuthResult login(Context context, String host, int port, String password) throws Exception {
         JSONObject requestBody = new JSONObject();
         requestBody.put("password", password);
-        JSONObject envelope = requestJson(host, port, "/api/auth/login", "POST", requestBody.toString());
+        byte[] wireKey = ApiCrypto.derivePasswordEnvelopeKey("cloud-phone", "login-request-wire-v1");
+        JSONObject encrypted = ApiCrypto.encryptPayload(requestBody, wireKey);
+        JSONObject envelope = requestJson(host, port, "/api/auth/login", "POST", encrypted.toString());
 
         if (!envelope.optBoolean("encrypted")) {
             return failed(envelope.optString("message", "登录响应未加密"));
         }
 
-        byte[] key = ApiCrypto.derivePasswordEnvelopeKey(password, "login-response-v1");
-        JSONObject body = ApiCrypto.decryptPayload(envelope, key);
-        if (!body.optBoolean("success", true)) {
-            return failed(body.optString("message", "登录失败"));
-        }
+        try {
+            byte[] key = ApiCrypto.derivePasswordEnvelopeKey(password, "login-response-v1");
+            JSONObject body = ApiCrypto.decryptPayload(envelope, key);
+            if (!body.optBoolean("success", true)) {
+                return failed(body.optString("message", "登录失败"));
+            }
 
-        return new AuthResult(
-                true,
-                body.optBoolean("authenticated"),
-                body.optBoolean("requiresPasswordChange"),
-                body.optBoolean("passwordConfigured"),
-                body.optString("message", ""),
-                body.optString("encryptionKey", "")
-        );
+            return new AuthResult(
+                    true,
+                    body.optBoolean("authenticated"),
+                    body.optBoolean("requiresPasswordChange"),
+                    body.optBoolean("passwordConfigured"),
+                    body.optString("message", ""),
+                    body.optString("encryptionKey", "")
+            );
+        } catch (Exception decryptError) {
+            JSONObject failedBody = ApiCrypto.decryptPayload(envelope, wireKey);
+            return failed(failedBody.optString("message", "登录失败"));
+        }
     }
 
-    AuthResult changePassword(String host, int port, String currentPassword, String nextPassword)
-            throws Exception {
+    AuthResult changePassword(
+            Context context,
+            String host,
+            int port,
+            String currentPassword,
+            String nextPassword
+    ) throws Exception {
         JSONObject requestBody = new JSONObject();
         requestBody.put("currentPassword", currentPassword);
         requestBody.put("nextPassword", nextPassword);
+
+        String sessionKey = SessionKeyStore.load(context);
+        JSONObject envelopeRequest;
+        boolean bootstrap;
+        if (sessionKey != null && !sessionKey.isEmpty()) {
+            bootstrap = false;
+            envelopeRequest = ApiCrypto.encryptPayload(requestBody, ApiCrypto.keyFromBase64(sessionKey));
+        } else {
+            bootstrap = true;
+            byte[] key = ApiCrypto.derivePasswordEnvelopeKey(currentPassword, "login-request-v1");
+            envelopeRequest = ApiCrypto.encryptPayload(requestBody, key);
+        }
+
         JSONObject envelope = requestJson(
                 host,
                 port,
                 "/api/auth/change-password",
                 "POST",
-                requestBody.toString()
+                envelopeRequest.toString()
         );
 
         JSONObject body = envelope;
         if (envelope.optBoolean("encrypted")) {
-            byte[] key = ApiCrypto.derivePasswordEnvelopeKey(currentPassword, "login-response-v1");
-            body = ApiCrypto.decryptPayload(envelope, key);
+            try {
+                byte[] key = bootstrap
+                        ? ApiCrypto.derivePasswordEnvelopeKey(currentPassword, "login-response-v1")
+                        : ApiCrypto.keyFromBase64(sessionKey);
+                body = ApiCrypto.decryptPayload(envelope, key);
+            } catch (Exception decryptError) {
+                byte[] wireKey = ApiCrypto.derivePasswordEnvelopeKey(
+                        "cloud-phone", "login-request-wire-v1");
+                body = ApiCrypto.decryptPayload(envelope, wireKey);
+            }
         }
 
         if (!body.optBoolean("success", false)) {
@@ -134,6 +172,19 @@ final class AuthApiClient {
         return new AuthResult(false, false, false, false, message, "");
     }
 
+    private JSONObject decryptSessionOrWire(Context context, JSONObject envelope) throws Exception {
+        String sessionKey = SessionKeyStore.load(context);
+        if (sessionKey != null && !sessionKey.isEmpty()) {
+            try {
+                return ApiCrypto.decryptPayload(envelope, ApiCrypto.keyFromBase64(sessionKey));
+            } catch (Exception ignored) {
+                // Public / unauthenticated session status uses the login-wire key.
+            }
+        }
+        byte[] wireKey = ApiCrypto.derivePasswordEnvelopeKey("cloud-phone", "login-request-wire-v1");
+        return ApiCrypto.decryptPayload(envelope, wireKey);
+    }
+
     private JSONObject requestJson(String host, int port, String path, String method, String body)
             throws Exception {
         HttpURLConnection connection = null;
@@ -148,6 +199,7 @@ final class AuthApiClient {
             if ("POST".equals(method) && body != null) {
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                connection.setRequestProperty("X-Encrypted-Request", "1");
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 connection.setFixedLengthStreamingMode(bytes.length);
                 try (OutputStream output = connection.getOutputStream()) {

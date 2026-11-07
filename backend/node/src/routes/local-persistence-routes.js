@@ -9,13 +9,17 @@ import {
   patchStoredRuntimeState,
   patchStoredSettings,
 } from "../services/local-persistence-store.js";
-import { readOptionalProtectedJsonBody, sendProtectedJson } from "../utils/protected-http.js";
-import { readJsonBody, sendJson } from "../utils/http.js";
+import {
+  readLoginWireProtectedJsonBody,
+  readProtectedJsonBody,
+  sendLoginWireProtectedJson,
+  sendProtectedJson,
+} from "../utils/protected-http.js";
 
 export async function handleLocalPersistenceRoute(req, res, method, pathname, url) {
   if (method === "GET" && pathname === "/api/public/preferences") {
     const settings = getStoredSettings();
-    sendJson(res, 200, {
+    sendLoginWireProtectedJson(res, 200, {
       success: true,
       version: APP_VERSION,
       preferences: {
@@ -28,12 +32,12 @@ export async function handleLocalPersistenceRoute(req, res, method, pathname, ur
 
   if (method === "POST" && pathname === "/api/public/preferences") {
     try {
-      const body = await readJsonBody(req);
+      const body = await readLoginWireProtectedJsonBody(req);
       const settings = patchStoredSettings({
         theme: body?.theme,
         locale: body?.locale,
       });
-      sendJson(res, 200, {
+      sendLoginWireProtectedJson(res, 200, {
         success: true,
         version: APP_VERSION,
         preferences: {
@@ -42,7 +46,7 @@ export async function handleLocalPersistenceRoute(req, res, method, pathname, ur
         },
       });
     } catch (error) {
-      sendJson(res, 400, {
+      sendLoginWireProtectedJson(res, 400, {
         success: false,
         version: APP_VERSION,
         error: "preferences_update_failed",
@@ -68,7 +72,7 @@ export async function handleLocalPersistenceRoute(req, res, method, pathname, ur
 
   if (method === "POST" && pathname === "/api/local-persistence") {
     try {
-      const body = await readOptionalProtectedJsonBody(req, res);
+      const body = await readProtectedJsonBody(req, res);
       const settings = body?.settings ? patchStoredSettings(body.settings) : getStoredSettings();
       const runtimeState = body?.runtimeState
         ? patchStoredRuntimeState(body.runtimeState)
@@ -106,7 +110,7 @@ export async function handleLocalPersistenceRoute(req, res, method, pathname, ur
 
   if (method === "POST" && pathname === "/api/logs") {
     try {
-      const body = await readOptionalProtectedJsonBody(req, res);
+      const body = await readProtectedJsonBody(req, res);
       appendStoredLog(body?.entry ?? {});
       sendProtectedJson(res, 200, {
         success: true,
