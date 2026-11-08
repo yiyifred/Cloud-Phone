@@ -557,3 +557,44 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 1. `AddDeviceApplePanel.vue` 383 行、`useDeviceScrcpyCast.js` 868 行、`windows-desktop.css` 1094 行、`add-device-modal.css` 997 行仍是超 300 行文件；
 2. 触控规则对 `pointer: coarse` 的桌面触屏设备同样生效（任务单允许的二选一方案）；
 3. 日志身份暂只有 admin/viewer 两档，接多用户前没有第三类角色。
+
+## 17. v1.28.0 进展（后端 TLS / 指标 / 深色 / 文件收敛）
+
+### 17.1 后端 TLS（T-436，补 S-13 的另一半）
+
+- `BACKEND_TLS=1` → `index.js` 用 `https.createServer` 承载同一套 `createRequestHandler()`（`app.js` 拆出，避免复制路由分发）；
+- 证书：`BACKEND_TLS_CERT/KEY` > openssl 自签（落盘 `backend/node/data/.tls`，目录 0700、私钥/证书 0600，SAN 指纹 + 剩余 <7 天才重签）；
+- 反代：`server.mjs`/`ws-proxy.mjs` 按 backendOrigin 协议选择客户端；环回后端默认接受自签，远端后端强制校验，除非 `BACKEND_TLS_INSECURE=1`；
+- 客户端：新增 `ServerUrl.java`，7 处硬编码 `http://`/`ws://` 统一走 scheme（https→wss），地址框支持 `https://host`，协议存 `server_scheme`；
+- 实测：`https://127.0.0.1:3998/api/ping` 200、同端口 http 不通；两次启动证书指纹一致（`sha256=9273638441a49efb…`）；经 5298 反代访问 https 后端返回 200 加密信封；TLS 与 metrics 同实例共存实测通过（3997）。
+
+### 17.2 Prometheus 指标（T-435）
+
+| 指标 | 标签 | 说明 |
+|---|---|---|
+| `cloud_phone_http_requests_total` | method, route, status | route 模板化（`:serial`/`:param`），不含序列号 |
+| `cloud_phone_http_request_duration_seconds` | method, route, status | histogram，bucket 0.005–5 |
+| `cloud_phone_ws_connections` | kind | 仅统计成功升级的连接 |
+| `cloud_phone_cast_sessions` | — | scrcpy 采集时求真值；harmony/ios 用操作前后差值记账 |
+| `cloud_phone_login_failures_total` | reason | bad_password / ip_lockout / global_lockout |
+
+- 访问控制：无 token 时仅回环；`METRICS_TOKEN` 允许 Bearer（timingSafeEqual）；拒绝与随机 404 的去 Date 头 diff 为 0；
+- 基数：单指标序列上限 500，超限丢弃并计 `cloud_phone_metrics_dropped_series_total`。
+
+### 17.3 深色模式（T-434）
+
+- `win-tokens.css` 54 个 `--win-*` token × 浅/深；`windows-desktop.css` 的 80 处 hex 全部替换（grep 计数 0）；
+- `theme-dark.css` 用 `html[data-theme="dark"]` 提高特异度，不依赖导入顺序；
+- 实测深色：任务栏 15.27:1、窗口正文 13.32:1、标题栏 10.06:1、三级文字 6.56:1、磁贴 5.82:1；浅色按原字面量取回（无回归）。
+
+### 17.4 文件收敛（T-433）
+
+- `useDeviceScrcpyCast.js` 868→98：`scrcpy-cast/cast-context.js` 保「单实例状态」，其余按启动日志 / socket / 帧 / 控制通道拆；对外 31 个字段逐一 diff 一致；
+- `AddDeviceApplePanel.vue` 383→112；`add-device-modal.css` 997→入口 16 行 + 5 个连续分片（拼接 diff 为空）。
+
+### 17.5 仍未做
+
+1. Android 真机/模拟器未编译验证（本机无 Android SDK），`ServerUrl` 仅做 `javac` 单文件校验；
+2. 深色截图来自探针页（环境密码已被改，无法登录真实工作区）——需要一次有会话的人工视觉确认；
+3. WS 与投屏会话的指标 gauge 未做真机端到端（无设备）；
+4. `app.js` 已 298 行，接近 300 上限，下一次改后端路由需要先拆分发。

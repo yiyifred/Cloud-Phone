@@ -276,6 +276,13 @@ Images are embedded in the corresponding feature sections below.
 - Touch targets on mobile are a consistent 44px (the smallest used to be 21.6px)
 - Stylesheets and two oversized components were split into modules so future changes no longer mean scrolling through 3000-line files
 
+### Operations (1.28.0)
+
+- **Optional backend HTTPS**: set `BACKEND_TLS=1` — a self-signed certificate is generated once and reused (or bring your own); the web proxy and the Android client follow the scheme automatically (https/wss)
+- **Prometheus metrics**: `GET /metrics` exposes request counts/latency, WebSocket connections, cast sessions and login failures; loopback only by default, remote scraping requires `METRICS_TOKEN`
+- **Dark mode completed**: multi-app desktop, taskbar and window chrome now have real dark rules (body text ≥13:1), with a 180 ms colour transition
+- The Android address field now accepts `https://192.168.1.10` directly
+
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ---

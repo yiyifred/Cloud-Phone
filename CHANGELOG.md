@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.28.0 - 2026-11-08
+
+**后端 HTTPS · Prometheus 指标 · 深色模式收口 · 大文件收敛**
+
+- **后端 TLS（T-436）**：`BACKEND_TLS=1` 时后端以 https 提供 API；证书优先取 `BACKEND_TLS_CERT/KEY`，否则用 openssl 生成自签证书落盘 `backend/node/data/.tls`（0600，SAN 指纹 + 剩余 <7 天才重签，重启指纹不变）；`app.js` 拆出 `createRequestHandler()` 让 http/https 共用路由；前端反代按协议切换并对环回后端放行自签（远端仍强制校验，除非 `BACKEND_TLS_INSECURE=1`）
+- **Android 协议收口**：新增 `ServerUrl.java`，7 处硬编码 `http://`/`ws://` 改为按 scheme 生成；地址框可填 `https://host`，协议持久化到 `server_scheme` 并在变更时清掉旧密码缓存（wss 随 https 自动切换）
+- **Prometheus 指标（T-435）**：`GET /metrics` 输出 HTTP 请求数/耗时直方图、WS 连接、投屏会话、登录失败；route 模板化（设备段折叠 `:serial`、包名折叠 `:param`，不外露序列号）；单指标序列上限 500；默认仅回环可读，`METRICS_TOKEN` 控制远端抓取，拒绝时与 404 无法区分
+- **深色模式（T-434）**：`windows-desktop.css` 的 80 处硬编码 hex 全部换成 `--win-*` 语义 token（浅色像素级不变），新增 `theme-dark.css` 覆盖桌面壳/任务栏/窗口/浮层；深色正文对比度 13.32:1、任务栏 15.27:1、三级文字 6.56:1；主题切换 180ms 颜色过渡并遵守 reduced-motion
+- **大文件收敛（T-433）**：`useDeviceScrcpyCast.js` 868→98（cast-context 保住单实例状态，拆出启动日志/连接/帧/控制通道），`AddDeviceApplePanel.vue` 383→112，`add-device-modal.css` 997→5 个连续分片（拼接 diff 为空）
+- 任务单 `tasks/T-433`～`T-436`
+
 ## 1.27.0 - 2026-11-08
 
 **审计身份 · 统一确认框 · 工程收敛**

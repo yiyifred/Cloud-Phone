@@ -36,6 +36,9 @@ frontend/android/.idea/
 
 # 自签 TLS 私钥与固定证书（首次生成后长期复用，绝不入库）
 frontend/web/.tls/
+backend/node/data/.tls/
+# 临时脚本与验证产物（AGENTS §9：临时文件一律放 tools/.tmp/，不入库）
+tools/.tmp/
 tools/test-scrcpy-cast/
 tools/test-scrcpy-cast.mjs
 tools/_split_controller_camera.py
