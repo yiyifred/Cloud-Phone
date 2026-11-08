@@ -29,6 +29,7 @@ import { parseCookies } from "./utils/cookies.js";
 import { applyCors, rejectOversizedRequest, sendEmpty } from "./utils/http.js";
 import {
   attachResponseEncryption,
+  getLoginWireKey,
   sendLoginWireProtectedJson,
   sendProtectedBuffer,
   sendProtectedJson,
@@ -55,12 +56,27 @@ function buildShareCookie(token, maxAgeSeconds, secure) {
   return parts.join("; ");
 }
 
+/**
+ * viewer 唯一允许的写操作是「开启/停止自己的投屏观看」：
+ * 不 start 就没有画面可看，不 stop 会话无处释放；两者都不改设备状态（不注入输入）。
+ */
+const VIEWER_ALLOWED_WRITE = [
+  { method: "POST", pattern: /^\/api\/devices\/[^/]+\/cast\/start$/ },
+  { method: "DELETE", pattern: /^\/api\/devices\/[^/]+\/cast\/stop$/ },
+];
+
 function isViewerAllowed(pathname, method) {
   if (pathname.startsWith("/api/share") || pathname.startsWith("/api/auth")) {
     return false;
   }
 
-  return method === "GET" || method === "HEAD";
+  if (method === "GET" || method === "HEAD") {
+    return true;
+  }
+
+  return VIEWER_ALLOWED_WRITE.some(
+    (rule) => rule.method === method && rule.pattern.test(pathname),
+  );
 }
 
 function sendUnauthorized(res) {
@@ -119,6 +135,9 @@ export function createApp() {
           return;
         }
 
+        // viewer 也要能解/发加密信封：没有会话密钥时统一用 login-wire key。
+        // 这只是混淆（常量公开），真正的机密性靠 TLS 与只读授权。
+        attachResponseEncryption(res, getLoginWireKey());
         accessRole = "viewer";
       }
     }
