@@ -41,7 +41,7 @@ class TerminalWebSocket {
         } catch (Exception e) {
             encodedSerial = serial;
         }
-        String url = "ws://" + host + ":" + port + "/api/devices/" + encodedSerial + "/terminal/ws";
+        String url = ServerUrl.wsUrl(host, port, "/api/devices/" + encodedSerial + "/terminal/ws");
         Request.Builder builder = new Request.Builder().url(url);
         SessionCookieHelper.attach(builder, host, port);
         ws = client.newWebSocket(builder.build(), new WebSocketListener() {

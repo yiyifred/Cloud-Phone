@@ -3,9 +3,10 @@
   T-414：只信任系统 CA；明文保留（原因见下）。
 
   为什么这样配：
-  本产品连的是局域网 http 自建后端（CloudPhoneApiClient.java:369、AuthApiClient.java:192、
-  MainActivity.java:456、SessionCookieHelper.java:23 全是硬编码 http；后端
-  backend/node/src/app.js:42 也只有 http），明文字段关掉等于让 release 包连不上任何设备。
+  默认部署仍是局域网 http 自建后端，明文字段关掉等于让 release 包连不上任何设备。
+  现在后端可用 BACKEND_TLS=1 提供 https（见 src/utils/backend-tls.js），客户端也支持在
+  地址框填 "https://<host>" 走 https/wss（见 ServerUrl.java）；那种部署下把
+  cleartextTrafficPermitted 改回 false 即可，默认值保留 true 只为兼容旧部署。
   能收敛又不破坏可用性的是「不信任用户证书」：以前装一张自签 CA 就能长期中间人抓走登录
   凭据与会话 Cookie，现在只认系统 CA，普通用户装不进系统 CA，这条路走不通。
   需要抓包时用 debug 变体：src/debug/res/xml/network_security_config.xml 是同名资源覆盖，

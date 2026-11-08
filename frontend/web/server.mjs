@@ -156,8 +156,27 @@ function isInsideDist(candidatePath) {
   return !relativePath.startsWith(`..${path.sep}`);
 }
 
+function isLoopbackHost(hostname) {
+  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1" || hostname === "[::1]";
+}
+
+/**
+ * 后端自己也上 TLS（BACKEND_TLS=1）时，反代必须改用 https 客户端。
+ * 环回地址默认接受自签证书（这本机链路），远端后端仍强制校验，
+ * 真要放开需显式 BACKEND_TLS_INSECURE=1。
+ */
+export function buildBackendClientOptions(backendUrl) {
+  if (backendUrl.protocol !== "https:") {
+    return {};
+  }
+
+  const insecure = process.env.BACKEND_TLS_INSECURE === "1" || isLoopbackHost(backendUrl.hostname);
+  return { rejectUnauthorized: !insecure };
+}
+
 async function proxyToBackend(clientReq, clientRes, requestUrl) {
   const backendUrl = new URL(backendOrigin);
+  const backendClient = backendUrl.protocol === "https:" ? https : http;
   const headers = { ...clientReq.headers, host: backendUrl.host };
 
   // 反代补头：后端据此判断「前端是否 HTTPS」，决定给 Cookie 加 Secure
@@ -168,12 +187,13 @@ async function proxyToBackend(clientReq, clientRes, requestUrl) {
     headers["x-forwarded-for"] = clientAddress;
   }
 
-  const proxyReq = http.request(
+  const proxyReq = backendClient.request(
     `${backendOrigin}${requestUrl.pathname}${requestUrl.search}`,
     {
       method: clientReq.method,
       headers,
       timeout: 0,
+      ...buildBackendClientOptions(backendUrl),
     },
     (proxyRes) => {
       // 后端响应头先铺底，再由本服务的统一安全头覆盖，保证策略只有一份来源

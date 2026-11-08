@@ -34,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_NAME = "cloud_phone_settings";
     private static final String KEY_SERVER_HOST = "server_host";
     private static final String KEY_SERVER_PORT = "server_port";
+    // http / https：后端上 TLS 后客户端按此切换 scheme，默认 http 保持向后兼容
+    private static final String KEY_SERVER_SCHEME = "server_scheme";
 
     private LinearLayout serverPanel;
     private LinearLayout authContainer;
@@ -122,12 +124,16 @@ public class MainActivity extends AppCompatActivity {
                 .getString(KEY_SERVER_HOST, LanServerDefaults.defaultHost());
         int port = getSharedPreferences(PREF_NAME, MODE_PRIVATE)
                 .getInt(KEY_SERVER_PORT, LanServerDefaults.DEFAULT_PORT);
-        editServerHost.setText(host);
+        String scheme = getSharedPreferences(PREF_NAME, MODE_PRIVATE)
+                .getString(KEY_SERVER_SCHEME, ServerUrl.SCHEME_HTTP);
+        ServerUrl.setScheme(scheme);
+        editServerHost.setText(ServerUrl.isHttps() ? "https://" + host : host);
         editServerPort.setText(String.valueOf(port));
     }
 
     private boolean saveServerConfigFromInput() {
-        String host = valueOf(editServerHost);
+        ServerUrl.Split split = ServerUrl.splitInput(valueOf(editServerHost));
+        String host = split.host;
         String portText = valueOf(editServerPort);
         if (host.isEmpty()) {
             editServerHost.setError(getString(R.string.server_host_hint));
@@ -147,19 +153,31 @@ public class MainActivity extends AppCompatActivity {
         android.content.SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
         String previousHost = prefs.getString(KEY_SERVER_HOST, "");
         int previousPort = prefs.getInt(KEY_SERVER_PORT, LanServerDefaults.DEFAULT_PORT);
+        String previousScheme = prefs.getString(KEY_SERVER_SCHEME, ServerUrl.SCHEME_HTTP);
         prefs.edit()
                 .putString(KEY_SERVER_HOST, host)
                 .putInt(KEY_SERVER_PORT, port)
+                .putString(KEY_SERVER_SCHEME, split.scheme)
                 .apply();
+        // 协议变化会让已保存的 Cookie 失效（域相同但 Secure 语义不同），一并清掉
+        ServerUrl.setScheme(split.scheme);
         if (!previousHost.isEmpty()
-                && (!previousHost.equals(host) || previousPort != port)) {
+                && (!previousHost.equals(host) || previousPort != port
+                        || !previousScheme.equals(split.scheme))) {
             SavedPasswordStore.clear(this, previousHost, previousPort);
         }
         return true;
     }
 
+    /** 解析地址输入框：允许 "https://host"，协议即时生效（URL 构造都读 ServerUrl）。 */
+    private ServerUrl.Split currentServerInput() {
+        ServerUrl.Split split = ServerUrl.splitInput(valueOf(editServerHost));
+        ServerUrl.setScheme(split.scheme);
+        return split;
+    }
+
     private void checkServerAndContinue() {
-        String host = valueOf(editServerHost);
+        String host = currentServerInput().host;
         String portText = valueOf(editServerPort);
         if (TextUtils.isEmpty(host) || TextUtils.isEmpty(portText)) {
             forceServerSettingsMode(getString(R.string.server_status_offline));
@@ -436,7 +454,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private ServerEndpoint readServerEndpoint() {
-        String host = valueOf(editServerHost);
+        String host = currentServerInput().host;
         String portText = valueOf(editServerPort);
         if (host.isEmpty() || portText.isEmpty()) {
             forceServerSettingsMode(getString(R.string.server_status_offline));
@@ -453,7 +471,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean pingServer(String host, int port) {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL("http://" + host + ":" + port + "/api/ping");
+            URL url = new URL(ServerUrl.httpUrl(host, port, "/api/ping"));
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(1800);

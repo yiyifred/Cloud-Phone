@@ -20,7 +20,7 @@ public final class SessionCookieHelper {
         }
         CookieManager manager = (CookieManager) handler;
         try {
-            URI uri = URI.create("http://" + host + ":" + port + "/");
+            URI uri = URI.create(ServerUrl.httpBase(host, port) + "/");
             List<HttpCookie> cookies = manager.getCookieStore().get(uri);
             if (cookies == null || cookies.isEmpty()) {
                 return;

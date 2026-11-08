@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 
 function buildUpgradeResponse(statusCode, statusMessage, headers) {
   const headerLines = Object.entries(headers ?? {})
@@ -15,13 +16,22 @@ function buildUpgradeResponse(statusCode, statusMessage, headers) {
   return `HTTP/1.1 ${statusCode} ${statusMessage}\r\n${headerLines.join("\r\n")}\r\n\r\n`;
 }
 
+function isLoopbackHost(hostname) {
+  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1" || hostname === "[::1]";
+}
+
 function proxyUpgradeRequest(clientReq, clientSocket, clientHead, backendOrigin, requestUrl) {
   const backendUrl = new URL(backendOrigin);
-  const proxyReq = http.request({
+  const isTls = backendUrl.protocol === "https:";
+  const backendClient = isTls ? https : http;
+  // 与 server.mjs 的 HTTP 反代保持同一套信任策略：环回后端接受自签证书。
+  const insecure = process.env.BACKEND_TLS_INSECURE === "1" || isLoopbackHost(backendUrl.hostname);
+  const proxyReq = backendClient.request({
     hostname: backendUrl.hostname,
-    port: backendUrl.port || 80,
+    port: backendUrl.port || (isTls ? 443 : 80),
     path: `${requestUrl.pathname}${requestUrl.search}`,
     method: clientReq.method,
+    ...(isTls ? { rejectUnauthorized: !insecure } : {}),
     headers: {
       ...clientReq.headers,
       host: backendUrl.host,

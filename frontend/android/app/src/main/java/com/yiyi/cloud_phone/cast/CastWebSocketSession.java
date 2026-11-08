@@ -34,7 +34,7 @@ final class CastWebSocketSession {
     }
 
     static String buildUrl(String host, int port, String serial) {
-        return "ws://" + host + ":" + port + "/api/devices/" + Uri.encode(serial) + "/cast/ws";
+        return ServerUrl.wsUrl(host, port, "/api/devices/" + Uri.encode(serial) + "/cast/ws");
     }
 
     void connect(

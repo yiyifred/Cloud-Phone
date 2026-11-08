@@ -54,8 +54,17 @@ export function getServerConfig() {
     .map((item) => item.trim())
     .filter(Boolean);
 
+  // 后端自身是否上 TLS：默认关（保持既有 http 部署不变），BACKEND_TLS=1 开启。
+  const backendTls = process.env.BACKEND_TLS === "1" || process.env.BACKEND_TLS === "true";
+  const backendTlsSans = String(process.env.BACKEND_TLS_SANS ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  // 开了后端 TLS 时，反代默认也要走 https，否则前端 502。
   const backendOrigin =
-    process.env.BACKEND_ORIGIN?.trim() || `http://127.0.0.1:${backendPort}`;
+    process.env.BACKEND_ORIGIN?.trim() ||
+    `${backendTls ? "https" : "http"}://127.0.0.1:${backendPort}`;
 
   const frontendHttps = process.env.FRONTEND_HTTPS !== "0";
   const frontendScheme = frontendHttps ? "https" : "http";
@@ -69,6 +78,8 @@ export function getServerConfig() {
     backendPort,
     frontendPort,
     backendOrigin,
+    backendTls,
+    backendTlsSans,
     frontendHttps,
     frontendTlsSans,
     frontendOrigin: `${frontendScheme}://127.0.0.1:${frontendPort}`,

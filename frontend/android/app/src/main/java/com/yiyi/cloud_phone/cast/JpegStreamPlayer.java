@@ -53,7 +53,7 @@ public class JpegStreamPlayer {
             encodedSerial = serial;
         }
 
-        String url = "ws://" + host + ":" + port + "/api/devices/" + encodedSerial + "/cast/ws";
+        String url = ServerUrl.wsUrl(host, port, "/api/devices/" + encodedSerial + "/cast/ws");
         Request.Builder builder = new Request.Builder().url(url);
         com.yiyi.cloud_phone.SessionCookieHelper.attach(builder, host, port);
         Request request = builder.build();

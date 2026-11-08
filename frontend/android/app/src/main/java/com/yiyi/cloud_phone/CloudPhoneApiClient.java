@@ -366,7 +366,7 @@ public final class CloudPhoneApiClient {
 
         HttpURLConnection connection = null;
         try {
-            URL url = new URL("http://" + host + ":" + port + path);
+            URL url = new URL(ServerUrl.httpUrl(host, port, path));
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod(method);
             connection.setConnectTimeout(8000);
@@ -423,7 +423,7 @@ public final class CloudPhoneApiClient {
         byte[] keyBytes = ApiCrypto.keyFromBase64(sessionKey);
         HttpURLConnection conn = null;
         try {
-            conn = (HttpURLConnection) new URL("http://" + host + ":" + port + path).openConnection();
+            conn = (HttpURLConnection) new URL(ServerUrl.httpUrl(host, port, path)).openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(8000);
             conn.setReadTimeout(30000);

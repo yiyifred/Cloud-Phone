@@ -189,7 +189,7 @@ final class AuthApiClient {
             throws Exception {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL("http://" + host + ":" + port + path);
+            URL url = new URL(ServerUrl.httpUrl(host, port, path));
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod(method);
             connection.setConnectTimeout(5000);

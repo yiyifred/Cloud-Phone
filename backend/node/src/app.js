@@ -23,6 +23,7 @@ import {
   isPublicApiPath,
   requireApiSession,
 } from "./middleware/api-auth.js";
+import { serveMetricsIfAuthorized, trackHttpRequest } from "./metrics/http.js";
 import { resolveShareToken } from "./services/share-tokens.js";
 import { isSecureRequest } from "./utils/request-https.js";
 import { parseCookies } from "./utils/cookies.js";
@@ -88,9 +89,14 @@ function sendUnauthorized(res) {
   });
 }
 
-export function createApp() {
-  return http.createServer(async (req, res) => {
+/**
+ * 请求处理函数单独导出：HTTP 与 HTTPS（BACKEND_TLS=1）共用同一套逻辑，
+ * 避免为 TLS 复制整份路由分发。
+ */
+export function createRequestHandler() {
+  return async (req, res) => {
     const { method, url } = req;
+    trackHttpRequest(req, res);
     const requestUrl = new URL(url ?? "/", "http://127.0.0.1");
     const { pathname } = requestUrl;
     const cookies = parseCookies(req.headers.cookie);
@@ -105,6 +111,12 @@ export function createApp() {
 
     if (method === "OPTIONS") {
       sendEmpty(res, 204);
+      return;
+    }
+
+    // /metrics 自带访问控制（默认仅回环；远端需 Bearer METRICS_TOKEN）。不满足时返回 false
+    // 交给末尾的通用 404，避免用响应差异暴露这个端点存在。
+    if (method === "GET" && pathname === "/metrics" && serveMetricsIfAuthorized(req, res)) {
       return;
     }
 
@@ -278,5 +290,9 @@ export function createApp() {
       version: APP_VERSION,
       error: "not_found",
     });
-  });
+  };
+}
+
+export function createApp() {
+  return http.createServer(createRequestHandler());
 }
