@@ -463,3 +463,38 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 3. 画廊角标靠 20s 轮询（无列表接口），几十台规模需要后端补 `GET /api/devices/control`。
 4. `DeviceWorkspace.vue` 663 行（改前 609），拆分属 v1.26 欠账。
 5. 抢占仍用 `window.confirm`，与仓库既有「断开设备」一致，未换页内确认。
+
+## 14. v1.26.0 进展（只读分享链接）
+
+### 14.1 为什么做
+
+认证一直是「一个密码 = 全部权限」。想让同事看一眼设备画面，就得把管理密码给出去，
+等于连安装、卸载、终端一起给了。在 1.25 的控制权租约之上，补第二种凭据：限时只读分享。
+
+### 14.2 落地内容
+
+| 层 | 内容 | 位置 |
+|---|---|---|
+| 分享令牌 | 内存态、只存 sha256、TTL 默认 24h（上限 30 天）、可吊销、明文只返回一次 | services/share-tokens.js |
+| 管理接口 | POST /api/share、GET /api/share、DELETE /api/share/:id（需管理员会话） | routes/share-routes.js |
+| 访问闸门 | 无会话时回落 cloud_phone_share cookie；viewer 只放 GET/HEAD，且排除 /api/share* 与 /api/auth* | app.js isViewerAllowed |
+| 落地页 | GET /api/share/redeem?token= 返回 302 + HttpOnly/SameSite=Lax/Max-Age cookie；失效跳 /?share=invalid | app.js |
+| 观看通道 | viewer 白名单仅 POST cast/start 与 DELETE cast/stop；viewer 分支用 login-wire key 处理信封 | app.js VIEWER_ALLOWED_WRITE |
+| WebSocket | viewer 可连投屏、控制帧丢弃并回 control-denied(reason=viewer)、终端 close 4403；视频帧与 RESET_VIDEO 放行 | middleware/ws-auth.js、services/control-guard.js |
+| 界面 | 设置页「分享」页签（生成/复制一次性链接/列表/吊销）；viewer 顶部横幅、群控入口隐藏、写操作禁用 | components/settings/SettingsShareSection.vue、ReadOnlyBanner.vue |
+
+### 14.3 实测记录
+
+- redeem：合法 token 返回 302 到 /?share=1 且 Set-Cookie 含 HttpOnly + SameSite=Lax + Max-Age；非法 token 跳 /?share=invalid；
+- 角色：viewer 访问 /api/access 得到 {role:viewer, readOnly:true}；管理员得到 admin；
+- 拦截：viewer 的 force-stop、安装、上传、/api/share 全部 403 viewer_forbidden；GET /api/devices 200；POST cast/start 落到 cast 层（无设备 500），DELETE cast/stop 200；
+- WS：仅 share cookie 的投屏握手 101（无投屏会话时 1008）、终端 4403「只读分享不能使用终端」、控制帧 0 到达监听器、伪造/缺失 cookie 401；
+- 吊销：吊销后同一 cookie 立即 401，页面刷新回登录页；
+- 界面：viewer 下群控消失、添加设备与设置保存禁用、工作区仅截屏可用；五语各 378 键无缺失。
+
+### 14.4 已知边界
+
+1. 同一浏览器已登录管理员时点分享链接不会进 viewer（会话优先，且会话密钥在 sessionStorage）；验收请用无痕窗口或另一台设备。
+2. viewer 的响应走 login-wire key（常量公开，属混淆）；机密性仍依赖 TLS 与只读授权。
+3. 分享令牌是内存态：进程重启即全部失效，这是有意的（避免遗留门禁卡）。
+4. 投屏被 viewer 开启时仍会向设备推送 scrcpy server；如需更严格，可加「可观看设备白名单」（未做）。

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.26.0 - 2026-11-08
+
+**只读分享链接（新）**
+
+- **分享令牌**：管理员可生成限时只读链接（1/8/24/72 小时，默认 24 小时、上限 30 天），服务端只存 `sha256(token)`，明文只在创建时返回一次，可随时吊销（`services/share-tokens.js`）
+- **访问闸门**：没有管理员会话时回落到 `cloud_phone_share` cookie；viewer 只允许 `GET/HEAD`，写操作 403 `viewer_forbidden`，且不能访问 `/api/share*` 与 `/api/auth*`（防止分享凭据自我续期或改密）；唯一写白名单是 `POST cast/start` 与 `DELETE cast/stop`（看画面所必需）
+- **落地页**：`GET /api/share/redeem?token=` 302 回控制台并种 HttpOnly + SameSite=Lax + Max-Age cookie；失效链接跳 `/?share=invalid`
+- **WebSocket**：viewer 可连投屏观看，控制帧一律丢弃并回 `control-denied(reason=viewer)`（视频帧与 RESET_VIDEO 放行），ADB 终端直接 `close 4403`
+- **界面**：设置页「分享」页签（生成 / 复制一次性链接 / 列表 / 吊销）；viewer 态顶部只读横幅，群控入口隐藏，添加设备、断开、清空日志、保存设置、改密全部禁用，工作区只保留截屏与投屏观看
+
+**其它**
+
+- 五语 `share.*` / `access.*` 文案（各 378 键，键集合一致）
+- 任务单 `tasks/T-424`～`T-427`
+
 ## 1.25.1 - 2026-11-08
 
 - **租约列表接口**：新增 `GET /api/devices/control`，一次返回全部被占用设备（`mine` 按请求者会话计算）；画廊角标不再按设备逐个发加密请求（24 台 = 24 请求），列表不可用时退回逐台探测
@@ -792,5 +807,3 @@
 ## 0.10.0 - 2026-05-27
 
 - 设置页新增界面语言切换，支持简体中文、English、繁體中文、日本語、한국어
-- 接入 `vue-i18n`：设置、侧栏、主题、登录/改密、设备画廊等核心界面文案多语言化
-- 语言偏好写入 `localStorage`，切换即时生效；日期与设备状态标签随 locale 格式化
