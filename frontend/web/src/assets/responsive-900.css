@@ -1,0 +1,47 @@
+@media (max-width: 900px) {
+  .console-layout {
+    grid-template-columns: 1fr;
+    /* 单列后行是自动高：显式写 auto + minmax(0,1fr) 并关掉拉伸分配，
+       否则 grid 的 align-content: stretch 会把「侧栏」这一行也拉高
+       （768 宽时顶部导航曾被撑到 425px，正文被挤到屏幕下半截） */
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar__tabs {
+    flex: 0 0 auto;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    gap: 0.35rem;
+  }
+
+  .sidebar__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0;
+    margin-left: auto;
+  }
+
+  .main-panel {
+    padding: 1.25rem;
+    min-height: 0;
+  }
+}
+

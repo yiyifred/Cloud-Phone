@@ -1,0 +1,20 @@
+/* T-429：main.css 已按「连续行区间」拆成 16 个模块，导入顺序严格等于原文件行序。
+   任何调整都必须保持顺序不变，否则级联结果会变；等价性自证命令见 tasks/T-429.md。 */
+@import "./base.css";
+@import "./shell-sidebar.css";
+@import "./layout.css";
+@import "./devices.css";
+@import "./workspace.css";
+@import "./workspace-actions.css";
+@import "./cast-viewport.css";
+@import "./workspace-controls.css";
+@import "./modals-auth.css";
+@import "./responsive-900.css";
+@import "./device-files.css";
+@import "./device-apps.css";
+@import "./device-apps-detail.css";
+@import "./device-terminal.css";
+@import "./responsive.css";
+@import "./share.css";
+/* 新增（非拆分产物）：移动端/触屏触控目标 ≥44px，见 U-19 */
+@import "./touch-targets.css";

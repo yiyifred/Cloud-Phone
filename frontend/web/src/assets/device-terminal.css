@@ -1,0 +1,118 @@
+.device-apps {
+  position: relative;
+}
+
+.device-terminal-overlay {
+  z-index: 1250;
+}
+
+.device-terminal {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  max-height: min(88vh, 780px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: 0 24px 48px rgb(0 0 0 / 0.22);
+  overflow: hidden;
+}
+
+.device-terminal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.device-terminal__title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.device-terminal__title h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.device-terminal__title p {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.device-terminal__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.device-terminal__status {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.device-terminal__status--connected {
+  color: var(--success-text);
+}
+
+.device-terminal__status--error {
+  color: #e55353;
+}
+
+.device-terminal__btn {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.device-terminal__btn:hover:not(:disabled) {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.08));
+}
+
+.device-terminal__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.device-terminal__error {
+  margin: 0;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  color: #e55353;
+  background: rgb(229 83 83 / 0.08);
+  border-bottom: 1px solid var(--line);
+}
+
+.device-terminal__screen {
+  flex: 1;
+  min-height: 320px;
+  padding: 0.35rem 0.5rem 0.5rem;
+  overflow: hidden;
+}
+
+.device-terminal__screen .xterm {
+  height: 100%;
+}
+
+.device-terminal__screen .xterm-viewport {
+  border-radius: 6px;
+}
+
+.device-terminal__footer {
+  padding: 0.45rem 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+

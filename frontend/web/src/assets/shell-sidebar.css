@@ -1,0 +1,173 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.35rem 1rem;
+  border-right: 1px solid var(--line);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(var(--blur));
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.sidebar__logo {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.85rem;
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.sidebar__brand strong {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+
+.sidebar__tabs {
+  display: grid;
+  gap: 0.4rem;
+  flex: 1;
+  align-content: start;
+}
+
+.sidebar__footer {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: auto;
+}
+
+.sidebar__footer .theme-toggle {
+  width: 100%;
+}
+
+.sidebar__tab,
+.sidebar__logout {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.sidebar__tab {
+  height: 2.375rem;
+  padding: 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  font-weight: 500;
+  /* ≤900px 侧栏变横排后可用宽度只够一行，按钮文字不能折行（曾把「退出登录」
+     拆成竖排四个字） */
+  white-space: nowrap;
+}
+
+.sidebar__tab .app-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.sidebar__tab:hover,
+.sidebar__logout:hover {
+  background: var(--bg-elevated);
+  border-color: var(--line);
+}
+
+.sidebar__tab:focus-visible,
+.sidebar__logout:focus-visible,
+.theme-toggle__option:focus-visible,
+.ghost-button:focus-visible,
+.device-workspace__back:focus-visible,
+.device-workspace__action:focus-visible,
+.device-files__nav-btn:focus-visible,
+.device-files__address-go:focus-visible,
+.device-files__action-btn:focus-visible,
+.device-terminal__btn:focus-visible,
+.device-apps__btn:focus-visible,
+.device-apps__row:focus-visible,
+.device-files__entry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sidebar__tab--active {
+  border-color: var(--line-strong);
+  background: var(--success-soft);
+  color: var(--success-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 25%, transparent);
+}
+
+.sidebar__logout {
+  height: 2.375rem;
+  padding: 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.sidebar__logout .app-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.theme-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(var(--blur));
+}
+
+.theme-toggle__option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 2.375rem;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.theme-toggle__option .app-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.theme-toggle__option--active {
+  background: var(--success-soft);
+  color: var(--success-text);
+  font-weight: 600;
+}
+
+.theme-toggle--dock {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 3;
+  width: min(100%, 11rem);
+  box-shadow: var(--shadow);
+}
+

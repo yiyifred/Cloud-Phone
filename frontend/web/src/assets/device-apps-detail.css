@@ -1,0 +1,127 @@
+.device-apps__mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+.device-apps__muted {
+  color: var(--text-muted);
+  margin-left: 0.25rem;
+}
+
+.device-apps__detail-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.device-apps__detail-modal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1rem;
+}
+
+.device-apps__detail-card {
+  max-width: 520px;
+  width: min(520px, 100%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgb(0 0 0 / 0.22);
+}
+
+.device-apps__detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.device-apps__detail-headings {
+  min-width: 0;
+}
+
+.device-apps__detail-sub {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
+
+.device-apps__detail-body {
+  padding: 0.75rem 1rem 1rem;
+}
+
+.device-apps__btn {
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.device-apps__btn:hover:not(:disabled) {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.08));
+}
+
+.device-apps__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.device-apps__btn--primary {
+  border-color: var(--accent, #16a34a);
+  background: color-mix(in srgb, var(--accent, #16a34a) 12%, transparent);
+}
+
+.device-apps__btn--danger {
+  border-color: color-mix(in srgb, var(--danger, #c0392b) 45%, transparent);
+  color: var(--danger, #c0392b);
+}
+
+.device-apps__confirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 1rem;
+}
+
+.device-apps__confirm-card {
+  max-width: 400px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.device-apps__confirm-card h4 {
+  margin: 0 0 0.35rem;
+}
+
+.device-apps__confirm-card p {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.device-apps__confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+

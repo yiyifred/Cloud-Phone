@@ -1,0 +1,49 @@
+/* T-429 · 审计 U-19：移动端/触屏下主要可点元素的最小热区抬到 2.75rem(44px)。
+   只用 min-height/min-width，不放大字号、不改桌面端布局；
+   放在 @import 链末尾，保证能覆盖此前 2.25rem 的小尺寸规则。 */
+@media (max-width: 900px), (pointer: coarse) {
+  .primary-button,
+  .ghost-button,
+  .sidebar__tab,
+  .sidebar__logout,
+  .theme-toggle__option,
+  .device-workspace__action,
+  .device-files__nav-btn,
+  .device-files__action-btn,
+  .device-files__close,
+  .device-files__address-go,
+  .device-apps__btn,
+  .device-terminal__btn,
+  .device-gallery-menu button,
+  .mobile-bottom-nav__item {
+    min-height: 2.75rem;
+  }
+
+  /* 纯图标按钮补等宽，保证 44×44 方形热区 */
+  .device-workspace__action,
+  .device-files__nav-btn,
+  .device-files__action-btn,
+  .device-files__close {
+    min-width: 2.75rem;
+  }
+
+  /* Naive UI 按钮（登录页 CTA「进入控制台」等）默认 36px，触屏下同样抬到 44px。
+     min-height 优先于 n-button 自带的 height，不需要改 naive-theme 的桌面高度。 */
+  .n-button {
+    min-height: 2.75rem;
+  }
+
+  /* 帮助「?」按钮 1.35/1.55rem(21.6/24.8px) 是审计里最小的热区；这里用双类提高
+     特异度，因为 ui-shell.css 在 main.js 里晚于本文件导入。 */
+  .help-hint.help-hint--sm,
+  .help-hint.help-hint--md {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* 列表行本身就是主要点按目标 */
+  .device-apps__row,
+  .device-files__entry {
+    min-height: 2.75rem;
+  }
+}

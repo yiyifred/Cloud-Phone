@@ -1,0 +1,283 @@
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: var(--overlay);
+  backdrop-filter: blur(10px);
+  /* 弹窗内容超出视口时可滚动；100dvh 避免移动端地址栏把内容顶出屏幕 */
+  max-height: 100dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-layer--auth {
+  align-items: center;
+}
+
+.auth-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 24rem) minmax(0, 26rem);
+  gap: 1rem;
+  align-items: stretch;
+  width: min(100%, 56rem);
+}
+
+.auth-stage__aside {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 1.35rem;
+  background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+  backdrop-filter: blur(var(--blur));
+  box-shadow: var(--shadow);
+}
+
+.auth-stage__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  line-height: 1.15;
+}
+
+.auth-stage__desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.auth-stage__cards {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-stage__card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg) 66%, transparent);
+}
+
+.auth-stage__card h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-family: var(--font-heading);
+}
+
+.auth-stage__card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.auth-stage__card--hint h3 {
+  color: var(--success-text);
+}
+
+.auth-stage__steps {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-stage__step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+}
+
+.auth-stage__step strong {
+  font-size: 0.84rem;
+}
+
+.auth-stage__step span {
+  color: var(--success-text);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.auth-stage__panel {
+  display: flex;
+  align-items: stretch;
+}
+
+.auth-modal {
+  width: min(100%, 26rem);
+  padding: 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: 1.35rem;
+  background: var(--bg-elevated);
+  backdrop-filter: blur(var(--blur));
+  box-shadow: var(--shadow);
+  /* 小屏 / 横屏时弹窗不能顶出视口，用 dvh 而非 vh（移动端地址栏会吃掉 100vh） */
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.auth-modal__brand {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+  border-radius: 1rem;
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.auth-modal__brand .app-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.auth-modal__intro {
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.field__control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.15rem 0.25rem 0.15rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+}
+
+.field__control input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.85rem 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+}
+
+/* input 自身 outline:none，焦点环画在外层胶囊上，保证输入框有可见焦点 */
+.field__control:focus-within {
+  box-shadow: var(--focus-ring);
+  border-color: var(--line-strong);
+}
+
+.field__control--readonly {
+  opacity: 0.85;
+}
+
+.field__toggle {
+  border: 0;
+  border-radius: var(--radius-md);
+}
+
+.field__toggle {
+  padding: 0.7rem 0.85rem;
+  background: var(--bg-muted);
+  color: var(--muted);
+}
+
+.field__toggle:hover {
+  color: var(--text);
+}
+
+.form-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.form-meta__state {
+  color: var(--success-text);
+  font-weight: 500;
+}
+
+.feedback {
+  min-height: 1.2rem;
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+/* 主按钮单一来源：登录卡、设置页、空态 CTA 共用这一套高度/圆角/字号/过渡，
+   避免再出现「三套主按钮」（同一页面里圆角 10px / 14px / 999px 混杂） */
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: var(--primary-text);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+.primary-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-1);
+}
+
+.primary-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+  box-shadow: none;
+}
+
+code {
+  padding: 0.12rem 0.4rem;
+  border-radius: 0.4rem;
+  background: var(--success-soft);
+  color: var(--success-text);
+  font-size: 0.9em;
+}
+

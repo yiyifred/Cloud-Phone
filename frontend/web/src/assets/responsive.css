@@ -1,0 +1,282 @@
+@media (max-width: 720px) {
+  .device-apps__list-wrap {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    max-height: 40vh;
+  }
+}
+
+@media (max-width: 560px) {
+  .console-layout,
+  .console-layout.console-layout--mobile {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: 1fr;
+    position: relative;
+  }
+
+  .main-panel {
+    flex: 1;
+    min-height: 0;
+    padding: 0.95rem 0.9rem calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .main-panel--workspace {
+    padding: 0.75rem 0.75rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .device-gallery {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .device-card {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .device-card__preview {
+    width: 42%;
+    min-width: 7.5rem;
+    aspect-ratio: auto;
+    /* 行内布局不需要 12rem 的竖屏占位，避免卡片被撑高 */
+    min-height: 7.5rem;
+    flex: 0 0 auto;
+  }
+
+  .device-card__meta {
+    flex: 1;
+    min-width: 0;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+    padding: 0.75rem 0.8rem;
+  }
+
+  .device-card__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel-header__actions {
+    align-items: center;
+    width: 100%;
+  }
+
+  .panel-header__buttons {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .device-files-overlay {
+    padding: 0.75rem;
+  }
+
+  .device-files__list-head {
+    grid-template-columns: minmax(0, 1fr) 4.5rem 2.75rem;
+  }
+
+  .device-files__row {
+    grid-template-columns: minmax(0, 1fr) 4.5rem 2.75rem;
+  }
+
+  .device-files__entry {
+    grid-column: 1 / 3;
+    grid-template-columns: minmax(0, 1fr) 4.5rem;
+  }
+
+  .device-files__col--modified {
+    display: none;
+  }
+
+  .theme-toggle--dock {
+    left: 0.75rem;
+    bottom: 0.75rem;
+  }
+
+  .modal-layer {
+    align-items: flex-end;
+    padding: 0.75rem;
+  }
+
+  /* ≤560px：弹窗贴底成 sheet，只留顶部圆角，拇指可达且不挡顶部内容 */
+  .modal-layer > :not(.auth-stage) {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    border-radius: 20px 20px 0 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .modal-layer--auth {
+    align-items: center;
+  }
+
+  .auth-stage {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .auth-stage__aside {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .auth-stage__title {
+    font-size: 1.2rem;
+  }
+
+  .auth-stage__cards {
+    gap: 0.55rem;
+  }
+
+  .auth-stage__step {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .device-workspace__split {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+    min-height: 0;
+  }
+
+  .device-workspace__split--mobile-options-open {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .device-workspace__pane--left {
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .device-workspace__pane--right {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .device-workspace__toolbar {
+    overflow: hidden;
+    gap: 0.35rem;
+    padding-bottom: 0;
+  }
+
+  .device-workspace__action {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0.28rem;
+  }
+
+  .device-workspace__action-icon {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+
+  .device-workspace__action-label {
+    display: none;
+  }
+
+  .device-workspace__mobile-cast-toggle {
+    width: fit-content;
+  }
+
+}
+
+
+/* ---------- 设备控制权租约（T-422） ---------- */
+
+/* 工具栏第一个按钮（取得/释放/被占用）沿用 .device-workspace__action 的尺寸与排版，
+   只用颜色区分状态：绿=我在控制、琥珀=别人在控制、默认=空闲。 */
+.device-workspace__action--lease-mine {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.device-workspace__action--lease-other {
+  border-color: color-mix(in srgb, var(--warning) 42%, var(--line));
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+}
+
+/* 被占用时的 hover 不能跳成通用绿色，否则会误导成「已取得」 */
+.device-workspace__action--lease-other:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--warning) 62%, var(--line));
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: var(--warning);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--warning) 14%, transparent);
+}
+
+.device-workspace__action--lease-other:hover:not(:disabled) .device-workspace__action-icon {
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: var(--warning);
+}
+
+.device-workspace__action--lease-mine:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--warning) 50%, var(--line));
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: var(--warning);
+}
+
+.device-workspace__action--lease-mine:hover:not(:disabled) .device-workspace__action-icon {
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: var(--warning);
+}
+
+.device-workspace__action--lease-busy {
+  cursor: progress;
+}
+
+/* 设备卡：「控制中 / 只读」角标挂在状态胶囊下方，不与截图内容抢位置。
+   只做提示不可点，所以不吃鼠标事件，避免挡住卡片本身的点击打开。 */
+.device-card__control {
+  position: absolute;
+  top: 2.15rem;
+  right: 0.65rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.device-card__control--mine {
+  border: 1px solid color-mix(in srgb, var(--success) 38%, transparent);
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.device-card__control--other {
+  border: 1px solid color-mix(in srgb, var(--warning) 34%, transparent);
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: var(--warning);
+}
+
+/* 控制权标签是「谁在控制」的唯一界面线索，给它比普通按键更宽的额度，
+   否则「由 Pixel 7 · Firefox 控制」会被截成「由 Pixel 7 · …」。 */
+.device-workspace__action--lease .device-workspace__action-label {
+  max-width: 11rem;
+}
+
+/* 窄屏下工具栏默认隐藏文字（只剩图标），但控制权是靠文字读的，
+   唯独这个按钮保留标签，否则用户在手机上只看到一个盾牌。 */
+@media (max-width: 560px) {
+  .device-workspace__action--lease .device-workspace__action-label {
+    display: block;
+    max-width: 5.5rem;
+    font-size: 0.66rem;
+  }
+}
+
+/* ── 只读分享（T-425）─────────────────────────────────────────────
+   分享访问的观感必须和「管理员丢了权限」区分开：横幅用品牌色而非错误色，
+   列表/表单沿用设置页的既有节奏，只有分享链接本身需要等宽字体。 */
+

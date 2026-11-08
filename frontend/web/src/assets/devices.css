@@ -1,0 +1,205 @@
+.device-gallery {
+  display: grid;
+  /* 上限 320px：原来 minmax(260px, 1fr) 在设备少时会把卡片拉到整行宽，右侧留大片空白 */
+  grid-template-columns: repeat(auto-fill, minmax(240px, 320px));
+  justify-content: center;
+  gap: 1.15rem;
+  align-content: start;
+  padding-right: 0.2rem;
+  padding-bottom: 0.35rem;
+}
+
+.device-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(var(--blur));
+  box-shadow: var(--shadow);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.device-card--clickable {
+  cursor: pointer;
+}
+
+.device-card--clickable:hover {
+  border-color: var(--line-strong);
+  /* 悬停阴影从 --text 派生：深色主题下不会变成一块看不见的黑影 */
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--text) 18%, transparent);
+  transform: translateY(-1px);
+}
+
+.device-card--clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.device-card--offline {
+  opacity: 0.88;
+}
+
+.device-card__preview {
+  position: relative;
+  /* 9/16 对平板类设备过高；3/4 配合 object-fit: contain 保证任何比例都不被裁 */
+  aspect-ratio: 3 / 4;
+  min-height: 12rem;
+  background: var(--bg-preview);
+}
+
+/* 离线设备没有画面可看，竖屏 3/4 只会留下一个巨大空白盒；
+   压缩成 16/10，让画廊里多台离线设备也能一屏排下 */
+.device-card--offline .device-card__preview {
+  aspect-ratio: 16 / 10;
+  min-height: 9rem;
+  background-image: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in srgb, var(--line) 45%, transparent),
+    transparent 70%
+  );
+}
+
+.device-card__preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--bg-image);
+  transition: none;
+}
+
+.device-card__placeholder {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  min-height: 100%;
+  color: var(--muted);
+}
+
+.device-card__placeholder .app-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.device-card__status {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.device-card__status--online {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.device-card__status--offline {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--muted);
+}
+
+.device-card__meta {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem 1.05rem;
+  border-top: 1px solid var(--line);
+}
+
+.device-card__title {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.device-card__title strong {
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.device-card__subtitle {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.device-card__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.75rem;
+  margin: 0;
+}
+
+.device-card__facts div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.device-card__facts dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.device-card__facts dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.device-card__mono {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.8rem;
+}
+
+.device-gallery-menu {
+  position: fixed;
+  z-index: 220;
+  min-width: 11rem;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.device-gallery-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.device-gallery-menu button:hover,
+.device-gallery-menu button:focus-visible {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  outline: none;
+}
+
+/* 菜单项去掉了 outline，用 focus-ring 补回可见焦点 */
+.device-gallery-menu button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.device-gallery-menu__danger {
+  color: #dc2626;
+}
+
+.panel-feedback--info {
+  color: var(--accent-soft);
+}
+

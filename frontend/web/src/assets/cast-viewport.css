@@ -1,0 +1,225 @@
+.device-cast-viewport {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  /* 投屏区一律用固定深色舞台，不再跟随主题变成浅灰背景 */
+  background: var(--bg-stage);
+  isolation: isolate;
+}
+
+.device-cast-viewport__fullscreen-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 6;
+  min-width: 4.5rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgb(8 12 20 / 68%);
+  color: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.device-cast-viewport__fullscreen-btn:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+
+.device-cast-viewport:focus {
+  /* 舞台本身是巨大容器，保留 outline:none，避免 2px 外框被父级 overflow 裁掉 */
+  outline: none;
+}
+
+/* 但键盘 Tab 进入舞台时必须有可见焦点：用内阴影画环，不会被 overflow:hidden 裁切 */
+.device-cast-viewport:focus-visible {
+  box-shadow: inset var(--focus-ring);
+}
+
+.device-cast-viewport__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.device-cast-viewport__stage--idle {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.device-cast-viewport__rotator {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+
+.device-cast-viewport__canvas {
+  position: relative;
+  z-index: 0;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  background: var(--bg-stage);
+}
+
+.device-cast-viewport__canvas--interactive {
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.device-cast-viewport__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: rgb(8 12 20 / 72%);
+}
+
+.device-cast-viewport__overlay--error p {
+  color: #ffb4b4;
+}
+
+.device-cast-viewport__overlay--logs {
+  place-content: stretch;
+  align-items: stretch;
+  justify-items: stretch;
+  padding: 1rem;
+}
+
+.device-cast-viewport__log-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+  padding: 0.85rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: var(--radius-md);
+  background: rgb(8 12 20 / 88%);
+}
+
+.device-cast-viewport__log-title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.device-cast-viewport__log-text {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.device-cast-viewport__badge {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgb(8 12 20 / 65%);
+  color: var(--muted);
+  font-size: 0.75rem;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.device-cast-viewport__screenshot-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: inherit;
+  animation: device-cast-screenshot-flash 0.55s ease-out forwards;
+  box-shadow:
+    inset 0 0 0 3px rgb(255 255 255 / 92%),
+    inset 0 0 48px 12px rgb(255 255 255 / 42%),
+    0 0 36px 8px rgb(255 255 255 / 28%);
+}
+
+@keyframes device-cast-screenshot-flash {
+  0% {
+    opacity: 1;
+    box-shadow:
+      inset 0 0 0 4px rgb(255 255 255 / 98%),
+      inset 0 0 72px 28px rgb(255 255 255 / 62%),
+      0 0 56px 16px rgb(255 255 255 / 45%);
+  }
+
+  45% {
+    opacity: 0.85;
+    box-shadow:
+      inset 0 0 0 2px rgb(255 255 255 / 75%),
+      inset 0 0 40px 16px rgb(255 255 255 / 35%),
+      0 0 28px 10px rgb(255 255 255 / 22%);
+  }
+
+  100% {
+    opacity: 0;
+    box-shadow:
+      inset 0 0 0 0 rgb(255 255 255 / 0%),
+      inset 0 0 0 0 rgb(255 255 255 / 0%),
+      0 0 0 0 rgb(255 255 255 / 0%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device-cast-viewport__screenshot-flash {
+    animation-duration: 0.2s;
+  }
+}
+
+.device-cast-viewport__placeholder {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 0.45rem;
+  max-width: 18rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.device-cast-viewport__placeholder p {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+}
+
+.device-cast-viewport__hint {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
