@@ -1,0 +1,250 @@
+.apple-panel--wizard .apple-panel__hero {
+  min-height: 12rem;
+}
+
+.apple-wizard__progress-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.apple-wizard__progress-meta {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.apple-wizard__progress-meta strong {
+  font-size: 0.95rem;
+}
+
+.apple-wizard__progress-meta span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.apple-wizard__progress-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+
+.apple-wizard__progress-track {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  overflow: hidden;
+}
+
+.apple-wizard__progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 65%, #fff));
+  transition: width 0.35s ease;
+}
+
+.apple-wizard__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apple-wizard__step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: var(--bg);
+}
+
+.apple-wizard__step--active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+}
+
+.apple-wizard__step--done {
+  border-color: color-mix(in srgb, #22c55e 35%, var(--line));
+  color: #15803d;
+}
+
+.apple-wizard__step--error {
+  border-color: color-mix(in srgb, #ef4444 40%, var(--line));
+  color: #b91c1c;
+}
+
+.apple-wizard__step-index {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 55%, transparent);
+  font-size: 0.68rem;
+  flex-shrink: 0;
+}
+
+.apple-wizard__step-label {
+  line-height: 1.2;
+}
+
+.apple-wizard__spin {
+  animation: apple-wizard-spin 0.9s linear infinite;
+}
+
+@keyframes apple-wizard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.apple-wizard__card {
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--bg) 92%, var(--accent) 8%);
+}
+
+.apple-wizard__card h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+}
+
+.apple-wizard__checklist {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.apple-wizard__checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.apple-wizard__checklist .is-ok {
+  color: #15803d;
+}
+
+.apple-wizard__checklist .is-fail {
+  color: #b91c1c;
+}
+
+.apple-wizard__checklist .is-warn {
+  color: #b45309;
+}
+
+.apple-wizard__hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.apple-wizard__error {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  color: #b91c1c;
+}
+
+.apple-wizard__form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.apple-wizard__form label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+}
+
+.apple-wizard__form input[type="email"],
+.apple-wizard__form input[type="password"] {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.apple-wizard__toggles {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.apple-wizard__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.apple-wizard__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.apple-wizard__actions-right {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.apple-wizard__logs {
+  margin: 0;
+  padding: 0.65rem;
+  max-height: 9rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--bg) 95%, #000 5%);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .apple-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .apple-panel__manual-row {
+    grid-template-columns: 1fr;
+  }
+
+  .apple-wizard__steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .add-device-modal__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .add-device-modal__usb-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .add-device-modal__pair-code,
+  .add-device-modal__pair-row {
+    grid-template-columns: 1fr;
+  }
+}

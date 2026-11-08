@@ -1,0 +1,155 @@
+.add-device-modal__usb {
+  display: grid;
+  gap: 1rem;
+}
+
+.add-device-modal__usb-layout {
+  display: grid;
+  grid-template-columns: minmax(10rem, 12rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.add-device-modal__usb-hero {
+  position: relative;
+  min-height: 14rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.usb-hero__phone {
+  position: absolute;
+  left: 50%;
+  top: 1.1rem;
+  width: 4rem;
+  height: 6.4rem;
+  border: 2px solid var(--line);
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, var(--bg-elevated), var(--bg));
+  transform: translateX(-50%);
+}
+
+.usb-hero__cable {
+  position: absolute;
+  left: 50%;
+  top: 8.2rem;
+  width: 1.4rem;
+  height: 4.2rem;
+  transform: translateX(-50%);
+  animation: usb-cable-bob 1.4s ease-in-out infinite;
+}
+
+.usb-hero__cable-line {
+  display: block;
+  width: 2px;
+  height: calc(100% - 1rem);
+  margin: 0 auto;
+  background: var(--line);
+}
+
+.usb-hero__plug {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.5rem;
+  height: 1rem;
+  border: 2px solid var(--line);
+  border-radius: 0.35rem;
+  background: var(--bg-elevated);
+  transform: translateX(-50%);
+}
+
+@keyframes usb-cable-bob {
+  0% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-0.75rem);
+  }
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.add-device-modal__usb-summary {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.add-device-modal__usb-empty {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: 0.85rem;
+  background: var(--bg);
+}
+
+.add-device-modal__usb-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.add-device-modal__usb-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.add-device-modal__usb-item-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.add-device-modal__usb-item-sub {
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-device-modal__usb-state {
+  flex-shrink: 0;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-elevated);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.add-device-modal__usb-state--ok {
+  color: var(--success-text);
+}
+
+.add-device-modal__usb-state--warn {
+  color: var(--warning, #b45309);
+}
+
+.add-device-modal__usb-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.add-device-modal__usb-actions .ui-button {
+  min-width: 5.5rem;
+  white-space: nowrap;
+}
+
