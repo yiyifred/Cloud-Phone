@@ -8,6 +8,7 @@ import { captureIosScreenshot } from "./services/ios/ios-device.js";
 import { listAllDevices } from "./services/device-list-service.js";
 import { handleAuthRoute } from "./routes/auth-routes.js";
 import { handleDeviceCastRoute } from "./routes/device-cast-routes.js";
+import { handleDeviceControlRoute } from "./routes/device-control-routes.js";
 import { handleDeviceConnectRoute } from "./routes/device-connect-routes.js";
 import { handleDeviceRoute } from "./routes/device-routes.js";
 import { handleHostRoute } from "./routes/host-routes.js";
@@ -111,6 +112,10 @@ export function createApp() {
     }
 
     if (await handleIosDeviceRoute(req, res, method, pathname)) {
+      return;
+    }
+
+    if (await handleDeviceControlRoute(req, res, method, pathname, sessionToken)) {
       return;
     }
 

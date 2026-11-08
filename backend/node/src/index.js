@@ -4,11 +4,14 @@ import { APP_VERSION } from "./config/version.js";
 import { getHostNetworkSummary } from "./utils/host-networks.js";
 import { startMdnsService } from "./services/mdns-service.js";
 import { setupDeviceWebSocket } from "./ws/device-websocket-server.js";
+import { startControlLeaseSweeper } from "./services/device-control-lease.js";
 
 const { host, backendPort } = serverConfig;
 
 const server = createApp();
 setupDeviceWebSocket(server);
+// 控制权租约 45 秒过期：定时清理，避免浏览器崩掉后设备一直被占用
+startControlLeaseSweeper();
 
 // Slow-loris hardening: Node keeps sockets open indefinitely by default, so an
 // unauthenticated client could hold thousands of half-finished uploads.
