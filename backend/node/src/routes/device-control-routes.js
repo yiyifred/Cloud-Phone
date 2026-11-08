@@ -4,6 +4,7 @@ import {
   acquireControlLease,
   getControlLease,
   isControlEnforced,
+  listControlLeases,
   releaseControlLease,
   renewControlLease,
   sessionKeyOf,
@@ -42,6 +43,24 @@ function sendLease(res, status, control) {
  * @returns {Promise<boolean>} 已处理返回 true
  */
 export async function handleDeviceControlRoute(req, res, method, pathname, sessionToken) {
+  // 画廊需要一次拿到所有设备的占用情况。没有这个接口时前端只能按 serial 逐个探测
+  // （24 台就是 24 个请求），设备一多就变成轮询风暴。
+  if (method === "GET" && pathname === "/api/devices/control") {
+    const sessionKey = sessionKeyOf(sessionToken);
+    const items = listControlLeases().map((item) => ({
+      serial: item.serial,
+      ...getControlLease(item.serial, sessionKey),
+    }));
+
+    sendProtectedJson(res, 200, {
+      success: true,
+      version: APP_VERSION,
+      items,
+      enforced: isControlEnforced(),
+    });
+    return true;
+  }
+
   const match = pathname.match(CONTROL_PATH);
 
   if (!match) {

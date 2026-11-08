@@ -75,6 +75,33 @@ export async function fetchDeviceControl(serial, options = {}) {
   return unwrap(payload);
 }
 
+/**
+ * 一次拿到所有被占用设备的租约（画廊角标用）。
+ * 后端没有租约的设备不会出现在 items 里，调用方需要把「缺失」当作空闲。
+ */
+export async function fetchDeviceControlList(options = {}) {
+  const payload = await requestJson("/api/devices/control", {
+    method: "GET",
+    signal: options.signal,
+    allowFailure: true,
+  });
+
+  if (payload?.success === false) {
+    return { ok: false, code: String(payload.error ?? "control_list_failed"), items: [], enforced: false };
+  }
+
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+
+  return {
+    ok: true,
+    code: "",
+    enforced: Boolean(payload?.enforced),
+    items: items
+      .filter((item) => item && typeof item.serial === "string")
+      .map((item) => ({ serial: item.serial, control: normalizeControlSnapshot(item) })),
+  };
+}
+
 async function postControl(serial, action, body, options = {}) {
   // body 统一带一个对象：空体会让 fetch 不设 X-Encrypted-Request，
   // 后端读不到 body 就只能当「无参数」处理，label / force 会被静默丢弃。

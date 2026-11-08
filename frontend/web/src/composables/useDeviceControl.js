@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import {
   acquireDeviceControl,
   fetchDeviceControl,
+  fetchDeviceControlList,
   heartbeatDeviceControl,
   releaseDeviceControl,
   releaseDeviceControlOnUnload,
@@ -41,9 +42,46 @@ function leaseLog(level, event, message, serial, details) {
   write("device", event, message, { deviceSerial: serial, details });
 }
 
-/** 串行探测：某台在途时直接跳过，避免抢占瞬间两个响应互相覆盖。 */
+/**
+ * 刷新画廊的控制权角标。
+ *
+ * 优先用一次性的列表接口：24 台设备逐个探测会变成 24 个加密请求，而画廊每 20 秒
+ * 就要刷新一轮。列表接口不可用时（老后端 / 网络异常）再退回逐台串行探测，
+ * 保证角标不会因为一次失败就整页空白。
+ */
 async function refreshSerials(serials) {
   const unique = [...new Set((serials ?? []).filter(Boolean))].slice(0, MAX_POLL_SERIALS);
+
+  if (!unique.length) {
+    return;
+  }
+
+  try {
+    const list = await fetchDeviceControlList();
+
+    if (list.ok) {
+      const covered = new Set();
+
+      for (const item of list.items) {
+        if (!unique.includes(item.serial)) continue;
+        covered.add(item.serial);
+        applySnapshot(item.serial, item.control, list.enforced);
+      }
+
+      // 列表里没有的 = 当前空闲：清掉旧快照，否则角标会一直停在「控制中」
+      for (const serial of unique) {
+        if (!covered.has(serial)) applySnapshot(serial, null, list.enforced);
+      }
+
+      return;
+    }
+
+    leaseLog("warn", "control.list.failed", "控制权列表不可用，退回逐台探测", "", { code: list.code });
+  } catch (error) {
+    leaseLog("warn", "control.list.error", "控制权列表请求异常，退回逐台探测", "", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   for (const serial of unique) {
     if (inflight.has(serial)) continue;
@@ -53,7 +91,7 @@ async function refreshSerials(serials) {
       if (result.ok) applySnapshot(serial, result.control, result.enforced);
     } catch (error) {
       // 单台探测失败不该把整页打成错误态：保留旧快照，只留一条 warn
-      leaseLog("warn", "control.poll.failed", `控制权探测失败：${serial}`, serial, {
+      leaseLog("warn", "control.poll.failed", "控制权探测失败：" + serial, serial, {
         error: error instanceof Error ? error.message : String(error),
       });
     } finally {
