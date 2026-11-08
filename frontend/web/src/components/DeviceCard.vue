@@ -230,7 +230,7 @@ watch(isInView, (visible) => {
         </div>
         <div>
           <dt>{{ t("devices.adbState") }}</dt>
-          <dd>{{ device.state }}</dd>
+          <dd>{{ stateLabel }}</dd>
         </div>
       </dl>
     </div>
