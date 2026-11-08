@@ -9,18 +9,27 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:activeTab", "logout"]);
 
 const { t } = useI18n();
 
-const tabs = computed(() => [
-  { id: "devices", label: t("sidebar.devices"), icon: "devices" },
-  { id: "group-control", label: t("sidebar.groupControl"), icon: "group-control" },
-  { id: "logs", label: t("sidebar.logs"), icon: "logs" },
-  { id: "settings", label: t("sidebar.settings"), icon: "settings" },
-]);
+const tabs = computed(() => {
+  const items = [
+    { id: "devices", label: t("sidebar.devices"), icon: "devices" },
+    { id: "group-control", label: t("sidebar.groupControl"), icon: "group-control" },
+    { id: "logs", label: t("sidebar.logs"), icon: "logs" },
+    { id: "settings", label: t("sidebar.settings"), icon: "settings" },
+  ];
+
+  // 分组控制全是往设备发写指令，只读分享访问下连入口都不给
+  return props.readOnly ? items.filter((tab) => tab.id !== "group-control") : items;
+});
 </script>
 
 <template>
@@ -51,7 +60,13 @@ const tabs = computed(() => [
 
     <div class="sidebar__footer">
       <ThemeToggle />
-      <button type="button" class="sidebar__logout" @click="emit('logout')">
+      <!-- viewer 无法调用 /api/auth/logout（会被 403），不摆一个按不动的按钮 -->
+      <button
+        v-if="!readOnly"
+        type="button"
+        class="sidebar__logout"
+        @click="emit('logout')"
+      >
         <AppIcon name="logout" />
         <span>{{ t("sidebar.logout") }}</span>
       </button>

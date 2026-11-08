@@ -8,6 +8,7 @@ import PageHeader from "./ui/PageHeader.vue";
 import SettingsAccountSection from "./settings/SettingsAccountSection.vue";
 import SettingsAppearanceSection from "./settings/SettingsAppearanceSection.vue";
 import SettingsRefreshSection from "./settings/SettingsRefreshSection.vue";
+import SettingsShareSection from "./settings/SettingsShareSection.vue";
 
 defineProps({
   settingsForm: {
@@ -23,6 +24,10 @@ defineProps({
     default: null,
   },
   showLogout: {
+    type: Boolean,
+    default: false,
+  },
+  readOnly: {
     type: Boolean,
     default: false,
   },
@@ -53,6 +58,7 @@ const activeSectionHelp = computed(() => t(`settings.sections.${activeSection.va
           :password-status-text="passwordStatusText"
           :session-expires-at="sessionExpiresAt"
           :show-logout="showLogout"
+          :read-only="readOnly"
           @change-password="emit('change-password')"
           @logout="emit('logout')"
         />
@@ -61,7 +67,15 @@ const activeSectionHelp = computed(() => t(`settings.sections.${activeSection.va
         <SettingsAppearanceSection />
       </NTabPane>
       <NTabPane name="refresh" :tab="t('settings.nav.refresh')">
-        <SettingsRefreshSection :settings-form="settingsForm" @save="emit('save')" />
+        <SettingsRefreshSection
+          :settings-form="settingsForm"
+          :read-only="readOnly"
+          @save="emit('save')"
+        />
+      </NTabPane>
+      <!-- 分享链接管理需要管理员会话（viewer 调 /api/share 会 403），只对管理员显示 -->
+      <NTabPane v-if="!readOnly" name="share" :tab="t('settings.nav.share')">
+        <SettingsShareSection />
       </NTabPane>
     </NTabs>
   </section>

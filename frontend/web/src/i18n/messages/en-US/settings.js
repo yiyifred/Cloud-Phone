@@ -8,6 +8,7 @@ export default {
       account: "Account",
       appearance: "Appearance",
       refresh: "Refresh",
+      share: "Sharing",
     },
     sections: {
       account: {
@@ -23,6 +24,10 @@ export default {
       refresh: {
         title: "Refresh",
         desc: "Configure automatic refresh intervals for the device gallery.",
+      },
+      share: {
+        title: "Sharing",
+        desc: "Create read-only share links so others can view device screens without the password (time-limited, revocable).",
       },
     },
     language: "Interface language",

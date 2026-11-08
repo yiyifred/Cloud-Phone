@@ -8,6 +8,7 @@ export default {
       account: "账号",
       appearance: "外观",
       refresh: "刷新",
+      share: "分享",
     },
     sections: {
       account: {
@@ -23,6 +24,10 @@ export default {
       refresh: {
         title: "刷新",
         desc: "配置设备画廊列表与截图的自动刷新间隔。",
+      },
+      share: {
+        title: "分享",
+        desc: "生成只读分享链接，让对方无需密码即可查看设备画面（限时、可吊销）。",
       },
     },
     language: "界面语言",

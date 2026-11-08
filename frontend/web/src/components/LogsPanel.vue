@@ -8,6 +8,13 @@ import PageHeader from "./ui/PageHeader.vue";
 import ShellSegmentTabs from "./ui/ShellSegmentTabs.vue";
 import { useAppEventLog } from "../composables/useAppEventLog.js";
 
+const props = defineProps({
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const { t } = useI18n();
 
 const {
@@ -68,7 +75,8 @@ const emptyMessage = computed(() =>
         size="small"
         :placeholder="t('logs.searchPlaceholder')"
       />
-      <NPopconfirm @positive-click="clearLog">
+      <!-- 清空日志是写操作（后端 POST），只读分享访问下直接禁用 -->
+      <NPopconfirm v-if="!props.readOnly" @positive-click="clearLog">
         <template #trigger>
           <NButton secondary size="small">{{ t("logs.clear") }}</NButton>
         </template>

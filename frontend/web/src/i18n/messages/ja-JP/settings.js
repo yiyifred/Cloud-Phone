@@ -8,6 +8,7 @@ export default {
       account: "アカウント",
       appearance: "外観",
       refresh: "更新",
+      share: "共有",
     },
     sections: {
       account: {
@@ -23,6 +24,10 @@ export default {
       refresh: {
         title: "更新",
         desc: "デバイスギャラリーの一覧とスクリーンショットの自動更新間隔を設定します。",
+      },
+      share: {
+        title: "共有",
+        desc: "読み取り専用の共有リンクを作成し、パスワードなしで画面を閲覧できるようにします（期間限定・失効可能）。",
       },
     },
     language: "UI 言語",

@@ -8,6 +8,7 @@ export default {
       account: "帳號",
       appearance: "外觀",
       refresh: "更新",
+      share: "分享",
     },
     sections: {
       account: {
@@ -23,6 +24,10 @@ export default {
       refresh: {
         title: "更新",
         desc: "設定裝置畫廊列表與截圖的自動更新間隔。",
+      },
+      share: {
+        title: "分享",
+        desc: "建立唯讀分享連結，讓對方不需密碼即可查看裝置畫面（限時、可撤銷）。",
       },
     },
     language: "介面語言",

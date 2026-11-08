@@ -48,11 +48,22 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  // 只读分享访问：所有写入口由各面板按这个标志禁用，壳本身不拦截渲染
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const activeTab = defineModel("activeTab", { type: String, required: true });
 const selectedDevice = defineModel("selectedDevice", { type: Object, default: null });
 const { isMobileLayout } = useMobileLayout();
+
+// viewer 不能做批量控制（全是往设备发写指令）；浏览器缓存里可能还留着上次的
+// 分组 Tab，这里直接落回设备画廊，避免打开一个点不动的页面。
+const effectiveTab = computed(() =>
+  props.readOnly && activeTab.value === "group-control" ? "devices" : activeTab.value,
+);
 
 const workspaceDevice = computed(() => {
   const selected = selectedDevice.value;
@@ -121,7 +132,8 @@ function handleTabChange(tabId) {
   <div class="console-layout" :class="{ 'console-layout--mobile': isMobileLayout }">
     <AppSidebar
       v-if="!isMobileLayout"
-      :active-tab="activeTab"
+      :active-tab="effectiveTab"
+      :read-only="readOnly"
       @update:active-tab="handleTabChange"
       @logout="emit('logout')"
     />
@@ -129,10 +141,10 @@ function handleTabChange(tabId) {
       class="main-panel"
       :class="{
         'main-panel--workspace': selectedDevice,
-        'main-panel--devices': !selectedDevice && activeTab === 'devices',
-        'main-panel--settings': !selectedDevice && activeTab === 'settings',
-        'main-panel--group-control': !selectedDevice && activeTab === 'group-control',
-        'main-panel--logs': !selectedDevice && activeTab === 'logs',
+        'main-panel--devices': !selectedDevice && effectiveTab === 'devices',
+        'main-panel--settings': !selectedDevice && effectiveTab === 'settings',
+        'main-panel--group-control': !selectedDevice && effectiveTab === 'group-control',
+        'main-panel--logs': !selectedDevice && effectiveTab === 'logs',
       }"
     >
       <DeviceWorkspace
@@ -141,31 +153,33 @@ function handleTabChange(tabId) {
         @close="handleCloseWorkspace"
       />
       <DevicesPanel
-        v-else-if="activeTab === 'devices'"
+        v-else-if="effectiveTab === 'devices'"
         :devices="devices"
         :loading="deviceLoading"
         :error="deviceError"
         :last-refreshed-at="lastRefreshedAt"
         :adb-path="adbPath"
         :screenshot-url="screenshotUrl"
+        :read-only="readOnly"
         @refresh="emit('refresh-devices')"
         @open-device="handleOpenDevice"
       />
       <GroupControlPanel
-        v-else-if="activeTab === 'group-control'"
+        v-else-if="effectiveTab === 'group-control'"
         :devices="devices"
         :loading="deviceLoading"
         :error="deviceError"
         :screenshot-url="screenshotUrl"
         @refresh="emit('refresh-devices')"
       />
-      <LogsPanel v-else-if="activeTab === 'logs'" />
+      <LogsPanel v-else-if="effectiveTab === 'logs'" :read-only="readOnly" />
       <SettingsPanel
-        v-else-if="activeTab === 'settings'"
+        v-else-if="effectiveTab === 'settings'"
         :settings-form="settingsForm"
         :password-status-text="passwordStatusText"
         :session-expires-at="sessionExpiresAt"
         :show-logout="isMobileLayout"
+        :read-only="readOnly"
         @save="emit('save-settings')"
         @change-password="emit('change-password')"
         @logout="emit('logout')"
@@ -173,7 +187,8 @@ function handleTabChange(tabId) {
     </main>
     <MobileBottomNav
       v-if="isMobileLayout && !workspaceDevice"
-      :active-tab="activeTab"
+      :active-tab="effectiveTab"
+      :read-only="readOnly"
       @update:active-tab="handleTabChange"
     />
   </div>
