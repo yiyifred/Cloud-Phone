@@ -5,9 +5,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- T-414：allowBackup 关闭——应用本地存了后端地址与会话 Cookie，adb backup /
+         云备份能整包导出，等于把凭据搬出设备；备份规则同时收紧为「全部排除」。
+         明文流量保留开启：本产品就是连局域网 http 自建后端（客户端与后端都只有 http），
+         release 一刀切禁明文会让 App 连不上任何设备。真正的收敛放在
+         res/xml/network_security_config.xml：只信任系统 CA，用户自装证书不参与校验，
+         「装张证书就能长期抓包」这条路被堵住；debug 变体再放开用户 CA 供调试。 -->
     <application
         android:name=".CloudPhoneApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:dataExtractionRules="@xml/data_extraction_rules"

@@ -29,21 +29,22 @@ const contentTypes = {
   ".woff2": "font/woff2",
 };
 
-// 统一出口的 CSP。相对最初构想放宽了两处，理由是「别把现有功能打挂」：
-// 1) style-src/font-src 放行 fonts.googleapis.com / fonts.gstatic.com：index.html
-//    直接引了 Google Fonts（DM Sans / Space Grotesk），不列白名单会静默变成回退字体；
-// 2) media-src 的 blob: 与 img-src 的 data:/blob: 是投屏、录音回放、设备截图、
+// 统一出口的 CSP。放行项都对应真实用法，不列白名单会「静默降级」：
+// 1) media-src 的 blob: 与 img-src 的 data:/blob: 是投屏、录音回放、设备截图、
 //    二维码 data URI 的实际用法；script-src 的 'wasm-unsafe-eval' 留给需要实例化
 //    wasm 的编解码/终端组件，去掉它会直接白屏或功能失效。
+// 2) 字体已改系统栈（T-412，见 index.html + main.css --font-sans），不再有外链字体
+//    请求，因此 style-src / font-src 都不再放行外网字体域；font-src 保留 data:
+//    是因为图标与兜底字体仍可能内联。
 // frame-ancestors 'none' 与 X-Frame-Options: DENY 双写，兼容老浏览器。
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
   "connect-src 'self' ws: wss:",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "font-src 'self' data:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
 ].join("; ");

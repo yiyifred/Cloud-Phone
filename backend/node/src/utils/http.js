@@ -13,8 +13,14 @@ const DEFAULT_JSON_BODY_BYTES = 1024 * 1024;
 const DEFAULT_UPLOAD_BODY_BYTES = 256 * 1024 * 1024;
 const MAX_UPLOAD_BODY_BYTES = 1024 * 1024 * 1024;
 
-/** PUT /api/devices/:serial/files and POST /api/devices/:serial/apps/install carry APK/file bytes. */
-const UPLOAD_PATH_PATTERN = /^\/api\/devices\/[^/]+\/(files|apps\/install)$/;
+/**
+ * 携带文件/安装包字节的路径：
+ * - PUT /api/devices/:serial/files          （整包加密 body）
+ * - PUT /api/devices/:serial/files/upload   （二进制流式上传）
+ * - POST /api/devices/:serial/apps/install  （APK）
+ * 少写 files/upload 会让 5 MiB 上传在进路由前就被 1 MiB 的 JSON 上限拦成 413。
+ */
+const UPLOAD_PATH_PATTERN = /^\/api\/devices\/[^/]+\/(files(\/upload)?|apps\/install)$/;
 
 export class BodyTooLargeError extends Error {
   constructor(limit) {

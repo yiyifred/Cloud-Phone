@@ -1,25 +1,41 @@
 import { DEVICE_FILES_DEFAULT_OPEN } from "./device-file-path.js";
-import { requestJson } from "./api.js";
-import { putEncryptedBinary } from "./api-binary.js";
+import {
+  fetchWithLanFallback,
+  parseEncryptedFetchResponse,
+  requestJson,
+} from "./api.js";
+import { putRawFileBody } from "./api-binary.js";
 
 export async function fetchDeviceFiles(serial, devicePath = DEVICE_FILES_DEFAULT_OPEN) {
   const params = new URLSearchParams({ path: devicePath });
   return requestJson(`/api/devices/${encodeURIComponent(serial)}/files?${params}`);
 }
 
+/**
+ * Download goes through the byte stream, so the body is never base64 in page
+ * memory: `response.blob()` hands the browser the bytes and objectURL saves it.
+ */
 export async function downloadDeviceFile(serial, devicePath, filenameHint) {
-  const result = await requestJson(`/api/devices/${encodeURIComponent(serial)}/files/download`, {
-    method: "POST",
-    body: { path: devicePath },
-  });
+  const params = new URLSearchParams({ path: devicePath });
+  const response = await fetchWithLanFallback(
+    `/api/devices/${encodeURIComponent(serial)}/files/download?${params}`,
+    { method: "POST", credentials: "include" },
+  );
 
-  if (!result?.data) {
-    throw new Error("缺少加密文件数据。");
+  const contentType = response.headers.get("content-type") ?? "";
+
+  // Errors keep the encrypted JSON envelope (401 included), so let the shared
+  // helper decrypt, surface "session expired", and raise the server message.
+  if (contentType.includes("application/json")) {
+    const result = await parseEncryptedFetchResponse(response);
+    throw new Error(result?.message ?? result?.error ?? "下载失败。");
   }
 
-  const bytes = Uint8Array.from(atob(result.data), (char) => char.charCodeAt(0));
-  const mime = result.contentType ?? "application/octet-stream";
-  const fileBlob = new Blob([bytes], { type: mime });
+  if (!response.ok) {
+    throw new Error(`下载失败（HTTP ${response.status}）。`);
+  }
+
+  const fileBlob = await response.blob();
   const name =
     filenameHint || devicePath.split("/").filter(Boolean).pop() || "download";
   const objectUrl = URL.createObjectURL(fileBlob);
@@ -34,9 +50,9 @@ export async function downloadDeviceFile(serial, devicePath, filenameHint) {
 }
 
 export async function uploadDeviceFile(serial, devicePath, file) {
-  return putEncryptedBinary(
-    `/api/devices/${encodeURIComponent(serial)}/files/upload`,
+  const params = new URLSearchParams({ path: devicePath });
+  return putRawFileBody(
+    `/api/devices/${encodeURIComponent(serial)}/files/upload?${params}`,
     file,
-    { path: devicePath },
   );
 }

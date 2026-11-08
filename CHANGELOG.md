@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.24.0 - 2026-11-08
+
+**性能与传输**
+
+- **文件流式化**：下载由「整文件 base64 进加密 JSON」改为 `createReadStream` 分块响应，上传改为 `pipeline` 流式落盘后 `adb push`；100 MiB 下载在 `--max-old-space-size=256` 下内存峰值 1.10× 文件大小，五种失败路径临时文件零残留（`services/device-files-transfer.js`、`utils/protected-http.js`、`routes/device-files-routes.js`）
+- **修复上传上限**：`UPLOAD_PATH_PATTERN` 漏了 `/files/upload`，5 MiB 上传会在进路由前被 1 MiB JSON 上限拦成 413（`utils/http.js`）
+- **上传错误语义**：目标目录不存在 404、父级非目录 / 缺 path / 空体 400、超限 413，不再一律 500
+
+**前端交付**
+
+- **字体自托管**：去掉 Google Fonts 外链，改系统字体栈；CSP 的 `style-src`/`font-src` 不再放行 googleapis/gstatic，离线与内网环境不再回退字体
+- **i18n 补齐**：ja-JP / ko-KR / zh-TW 缺的 35×3 个 `devices.addDeviceModal.*` 键与 en-US 的 `qr.imageTitle` 全部补齐，五语均 326 键、键集合一致，运行时零 `Not found` 警告
+- **视觉收敛**：主按钮合并为单一来源（token 化的高度/圆角/字号/过渡/焦点环），离线设备卡片改 16/10、ADB 状态中文化
+
+**平台加固**
+
+- **Android**：`allowBackup=false`，备份规则 cloud-backup 与 device-transfer 全量排除；`network_security_config` 只信任系统 CA（debug 变体放开 user CA 供抓包）；明文保留并写明原因——客户端与后端都只有 http，一刀切会连不上设备
+- **Docker**：前后端镜像以 uid 10001 非 root 运行，数据目录外置 `/data`；compose（含 build 变体）加 `no-new-privileges` 与 `cap_drop: ALL`；新增根目录 `.dockerignore`，不再把 `.env` 与 1.8G 参考仓库打进镜像
+
+**文档**
+
+- 任务单 `tasks/T-411`～`T-416`；`docs/security-and-ux-hardening.md` 补 v1.24 进展与验证数据
+
 ## 1.23.0 - 2026-11-07
 
 **安全加固**
@@ -813,37 +836,3 @@
 - Lucide-style file-up / file-down toolbar icons
 
 ## 0.9.3 - 2026-05-27
-
-- README 新增「相关链接」板块：GitHub、Gitee、[LINUX DO](https://linux.do/) 独立成节；页眉补充 Gitee 入口
-- 重写 README：中英文分离，中文为主文件，英文独立到 README.EN.md；顶部互相跳转
-- 各功能截图（设备画廊、镜像投屏、摄像头投屏、文件管理、应用管理、终端）插入到对应功能小节下方
-- 截图文件路径统一为 `images/readme/*.png`，赞助二维码放在文末
-- 新增 LINUX DO 社区准则节；完善致谢表格，补充所有依赖项目链接
-
-### README rewrite
-- Added **Links** section (GitHub, Gitee, LINUX DO); Gitee link in header
-- Split Chinese/English: `README.md` (Chinese) + `README.EN.md` (English)
-- Feature screenshots embedded in corresponding sections
-- Added LINUX DO community guidelines section
-- Completed acknowledgements with all dependency links and sponsorship QR codes
-
-## 0.9.2 - 2026-05-27
-
-- 全局键盘捕获：投屏画面获得焦点后，所有按键（按下/抬起）直接通过 scrcpy `INJECT_KEYCODE` 透传到设备，包含 Shift/Ctrl/Alt/Meta 等修饰键状态
-- 内置常见键位映射（字母、数字、功能键 F1–F12、方向键、符号键、小键盘等）
-- 移除底部文本输入框，不再需要点击输入框；直接点击投屏画面聚焦后即可打字
-
-### Global keyboard capture for cast viewport
-- All keydown/keyup events forwarded to device as scrcpy INJECT_KEYCODE when viewport is focused
-- Full modifier state (Shift, Ctrl, Alt, Meta, CapsLock, NumLock) included in each key event
-- Removed text input overlay; click viewport to focus then type directly
-
-## 0.9.1 - 2026-05-27
-
-- Remove OTG cast mode and all related web UHID / virtual AOA plumbing (Pointer Lock capture, `otg/input/ws`, `scrcpy-otg` backend service, OTG settings UI and styles); cast modes are mirror and camera only
-- Simplify cast viewport and `useDeviceScrcpyCast` to canvas WebSocket preview + standard touch injection
-- Restore full toolbar actions during cast (no OTG-only restrictions)
-- scrcpy capabilities UI: drop OTG / USB group entry
-- Cast debug: recognize UHID control packet types (12–14) in `ws-packet-summary`; `WsControlChannel` serializes control writes to avoid interleaved pipe corruption
-
-## 0.9.0 - 2026-05-27

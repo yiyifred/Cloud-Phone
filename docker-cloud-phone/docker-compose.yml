@@ -4,6 +4,18 @@
 # 用法:
 #   ./compose.sh up -d
 #   docker compose --env-file ../.env up -d
+#
+# T-415 加固说明：
+# - 两个服务都以容器内 uid 10001（cloudphone）运行，所以 ./data 必须对该 uid 可写：
+#     首次升级执行一次  sudo chown -R 10001:10001 docker-cloud-phone/data
+#     顺手收权限        sudo chmod -R 700 docker-cloud-phone/data
+#   否则后端写 /data 会 EACCES 直接启动失败；data 目录里放的是 auth.key 与 sqlite，
+#   0777 等于把凭据摊给宿主机所有用户。
+# - 没有加 read_only: true：后端要写 /data 与 /tmp，前端要写 dist 与 .tls。
+# - cap_drop: ALL 之后没有加回任何 capability：host 网络下的 ADB（TCP）与 mDNS/UDP 广播
+#   都不需要 NET_ADMIN/NET_RAW。若确实要用 USB 直通 ADB，需要额外加 devices + group_add
+#   （宿主机 plugdev 的 gid），届时按需显式加回能力并在同一行注释原因。
+# - network_mode: host 保留：ADB 局域网发现与设备枚举依赖宿主网络栈。
 name: cloud-phone
 
 services:
@@ -21,6 +33,11 @@ services:
       CLOUD_PHONE_DATA_DIR: /data
     volumes:
       - ./data:/data
+    # 禁止 setuid 提权程序获得新权限；配合镜像内 USER 10001，容器内 RCE 拿不到 root
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
 
   frontend:
@@ -34,6 +51,10 @@ services:
       FRONTEND_PORT: ${FRONTEND_PORT:-5173}
       BACKEND_ORIGIN: http://127.0.0.1:${BACKEND_PORT:-3000}
       CLOUD_PHONE_USE_HOST_NETWORK: "1"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       - backend
     restart: unless-stopped

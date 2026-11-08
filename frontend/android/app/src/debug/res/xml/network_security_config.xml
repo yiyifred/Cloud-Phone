@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  T-414：debug 变体的同名资源覆盖（src/main 的版本默认全禁明文）。
+  只在调试包里放开局域网 http，release 仍走默认拒绝，所以用调试包连
+  http://<lan-ip>:3000 不会 403/CLEARTEXT 报错。
+  这里额外信任 user CA，是为了让 mitmproxy / Charles 这类调试代理在 debug 包上可用；
+  release 包只信任系统 CA（见 src/main/res/xml/network_security_config.xml）。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
