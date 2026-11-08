@@ -121,9 +121,23 @@ export function denyWriteIfNotController(req, res, serial, action) {
 
 /**
  * 终端 WS 的开壳前置判断。
+ *
+ * viewer（只读分享）无论租约如何都不得开 shell：终端等于设备上的任意命令执行。
+ *
+ * @param {string} serial
+ * @param {string|null} sessionToken
+ * @param {{role?: "admin"|"viewer"}} [options]
  * @returns {null | {code: string, message: string, holder: object|null}}
  */
-export function describeTerminalDenial(serial, sessionToken) {
+export function describeTerminalDenial(serial, sessionToken, options = {}) {
+  if (options.role === "viewer") {
+    return {
+      code: "viewer_forbidden",
+      holder: null,
+      message: "只读分享不能使用终端。",
+    };
+  }
+
   if (!isControlEnforced()) {
     return null;
   }
@@ -143,24 +157,35 @@ export function describeTerminalDenial(serial, sessionToken) {
   };
 }
 
-function sendControlDeniedFrame(ws, serial, snapshot, deniedFrames) {
+/** 回执帧：viewer 与「不持租约」两种拒绝共用 type，用 reason / error 区分来源。 */
+function buildDeniedPayload(serial, verdict, deniedFrames) {
+  if (verdict.kind === "viewer") {
+    return {
+      type: "control-denied",
+      reason: "viewer",
+      serial,
+      message: "当前是只读分享访问，不能操作设备。",
+      deniedFrames,
+    };
+  }
+
+  return {
+    type: "control-denied",
+    serial,
+    error: verdict.code,
+    message: denialMessage(verdict.code, serial, verdict.holder),
+    holder: verdict.holder ?? null,
+    deniedFrames,
+  };
+}
+
+function sendControlDenied(ws, serial, verdict, deniedFrames) {
   if (ws.readyState !== 1) {
     return;
   }
 
-  const code = snapshot.held ? "control_lease_held" : "control_lease_required";
-
   try {
-    ws.send(
-      JSON.stringify({
-        type: "control-denied",
-        serial,
-        error: code,
-        message: denialMessage(code, serial, snapshot.holder),
-        holder: snapshot.holder ?? null,
-        deniedFrames,
-      }),
-    );
+    ws.send(JSON.stringify(buildDeniedPayload(serial, verdict, deniedFrames)));
   } catch (error) {
     // 回执发不出去不能静默：日志里必须留下「有人在无权限状态下操作」的证据
     console.warn("[control-guard] control-denied 回执发送失败：", error?.message ?? error);
@@ -168,24 +193,17 @@ function sendControlDeniedFrame(ws, serial, snapshot, deniedFrames) {
 }
 
 /**
- * 投屏 WS 的控制帧闸门。
+ * 在 ws.emit 这一层拦帧的通用实现。
  *
- * 为什么改 ws.emit 而不是加一个 message 监听器：Node 的 EventEmitter 没有
+ * 为什么改 emit 而不是加一个 message 监听器：Node 的 EventEmitter 没有
  * stopPropagation，而同一个投屏 socket 上有三路 message 监听（首帧早缓冲、
- * ws-scrcpy 代理、legacy 桥接）。只在 emit 这一层拦下，才能保证三路都拿不到
- * 非持有者的控制帧；否则帧仍会被其中一路转发给设备。
- *
- * advisory 模式直接返回 null 且不打补丁，保证既有行为逐字节一致。
+ * ws-scrcpy 代理、legacy 桥接）。只在 emit 这一层拦下，才能保证三路都拿不到被拒的帧。
  *
  * @param {import("ws").WebSocket} ws
- * @param {{serial: string, sessionToken: string|null}} options
+ * @param {(data: unknown) => null | {kind: string, code?: string, holder?: object|null}} decide
+ * @param {(ws: any, verdict: any, deniedFrames: number) => void} notify
  */
-export function installCastControlFrameGate(ws, { serial, sessionToken }) {
-  if (!isControlEnforced() || typeof ws?.emit !== "function") {
-    return null;
-  }
-
-  const sessionKey = sessionKeyOf(sessionToken);
+function installEmitGate(ws, decide, notify) {
   const state = { deniedFrames: 0, lastNoticeAt: 0 };
   const originalEmit = ws.emit;
 
@@ -194,9 +212,9 @@ export function installCastControlFrameGate(ws, { serial, sessionToken }) {
       return originalEmit.call(this, event, ...args);
     }
 
-    const snapshot = getControlLease(serial, sessionKey);
+    const verdict = decide(args[0]);
 
-    if (snapshot.mine || !isDeviceControlFrame(args[0])) {
+    if (!verdict) {
       return originalEmit.call(this, event, ...args);
     }
 
@@ -206,7 +224,7 @@ export function installCastControlFrameGate(ws, { serial, sessionToken }) {
 
     if (now - state.lastNoticeAt >= DENY_NOTICE_INTERVAL_MS) {
       state.lastNoticeAt = now;
-      sendControlDeniedFrame(this, serial, snapshot, state.deniedFrames);
+      notify(this, verdict, state.deniedFrames);
     }
 
     // 丢弃：不返回 false 之外的任何信号，避免下游把「已拦下」误当成「已转发」
@@ -214,4 +232,49 @@ export function installCastControlFrameGate(ws, { serial, sessionToken }) {
   };
 
   return state;
+}
+
+/**
+ * 投屏 WS 的控制帧闸门。
+ *
+ * 两种拒绝来源共用一条管线（限流、回执格式都一致）：
+ * - viewer（只读分享）：任何控制帧都丢，不参与租约判定 —— 分享凭据永远没有控制权；
+ * - 管理员 + strict：非租约持有者的控制帧丢弃；
+ * - 管理员 + advisory：直接返回 null 且不打补丁，保证既有行为逐字节一致。
+ *
+ * @param {import("ws").WebSocket} ws
+ * @param {{serial: string, sessionToken?: string|null, role?: "admin"|"viewer"}} options
+ */
+export function installCastControlFrameGate(ws, { serial, sessionToken = null, role = "admin" } = {}) {
+  if (typeof ws?.emit !== "function") {
+    return null;
+  }
+
+  const isViewer = role === "viewer";
+
+  if (!isViewer && !isControlEnforced()) {
+    return null;
+  }
+
+  const sessionKey = sessionKeyOf(sessionToken);
+
+  const decide = isViewer
+    ? (data) => (isDeviceControlFrame(data) ? { kind: "viewer" } : null)
+    : (data) => {
+        const snapshot = getControlLease(serial, sessionKey);
+
+        if (snapshot.mine || !isDeviceControlFrame(data)) {
+          return null;
+        }
+
+        return {
+          kind: "lease",
+          code: snapshot.held ? "control_lease_held" : "control_lease_required",
+          holder: snapshot.holder ?? null,
+        };
+      };
+
+  return installEmitGate(ws, decide, (socket, verdict, deniedFrames) =>
+    sendControlDenied(socket, serial, verdict, deniedFrames),
+  );
 }

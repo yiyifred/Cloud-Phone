@@ -9,7 +9,7 @@ import {
   handleDeviceTerminalWebSocket,
   parseTerminalWebSocketPath,
 } from "../routes/device-terminal-routes.js";
-import { isAllowedWsOrigin, verifyWebSocketSession } from "../middleware/ws-auth.js";
+import { isAllowedWsOrigin, resolveWebSocketPrincipal } from "../middleware/ws-auth.js";
 import {
   CONTROL_DENIED_CLOSE_CODE,
   clampCloseReason,
@@ -94,9 +94,10 @@ export function setupDeviceWebSocket(server) {
       return;
     }
 
-    const session = await verifyWebSocketSession(request);
+    // 管理员会话优先，其次只读分享令牌（viewer）；两者都没有才是 401
+    const principal = await resolveWebSocketPrincipal(request);
 
-    if (!session) {
+    if (!principal) {
       logCastWarn(serial, "ws.rejected", {
         reason: "unauthorized",
         path: requestUrl.pathname,
@@ -106,8 +107,9 @@ export function setupDeviceWebSocket(server) {
       return;
     }
 
-    // 控制权租约要用「这条连接属于哪个会话」来判断，握手阶段已经拿到 cookie 里的 token
-    const sessionToken = session.token ?? null;
+    // 控制权租约要用「这条连接属于哪个会话」来判断；viewer 没有会话 token（分享凭据永远不持租约）
+    const role = principal.role;
+    const sessionToken = principal.sessionToken ?? null;
 
     const release = terminalRoute ? acquireTerminalSlot(serial) : acquireCastSlot();
 
@@ -120,14 +122,15 @@ export function setupDeviceWebSocket(server) {
 
     const channel = castRoute?.channel ?? "terminal";
 
-    logCastInfo(serial, "ws.upgrade", { path: requestUrl.pathname, channel });
+    logCastInfo(serial, "ws.upgrade", { path: requestUrl.pathname, channel, role });
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       ws.once("close", release);
 
       if (terminalRoute) {
         // strict 下非持有者不许开 shell：升级后立刻带原因关闭，避免先起 adb shell 再断
-        const denial = describeTerminalDenial(terminalRoute.serial, sessionToken);
+        // viewer 无论租约状态都不得开 shell：终端等于设备上的任意命令执行
+        const denial = describeTerminalDenial(terminalRoute.serial, sessionToken, { role });
 
         if (denial) {
           logCastWarn(serial, "ws.terminal.denied", {
@@ -150,8 +153,9 @@ export function setupDeviceWebSocket(server) {
         return;
       }
 
-      // 控制帧闸门必须在任何 message 监听器之前装好（advisory 下不打补丁）
-      installCastControlFrameGate(ws, { serial: castRoute.serial, sessionToken });
+      // 控制帧闸门必须在任何 message 监听器之前装好（管理员+advisory 下不打补丁）
+      // viewer 照常收画面，但控制帧一律丢弃；管理员走 T-421 的租约判定
+      installCastControlFrameGate(ws, { serial: castRoute.serial, sessionToken, role });
 
       if (castRoute.channel === "control") {
         void handleCastControlWebSocket(ws, castRoute.serial);
