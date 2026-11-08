@@ -9,6 +9,11 @@ export const PUBLIC_API_PATHS = new Set([
 ]);
 
 export function isPublicApiPath(pathname, method) {
+  // 分享链接本身就带凭据（token 在 query 里），落地页必须先于鉴权闸门执行
+  if (pathname === "/api/share/redeem" && method === "GET") {
+    return true;
+  }
+
   if (pathname === "/api/public/preferences") {
     // Reading the theme is needed on the login screen; writing global state
     // without a session let any LAN host rewrite it.
