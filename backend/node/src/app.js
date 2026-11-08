@@ -109,6 +109,9 @@ export function createApp() {
     }
 
     let accessRole = "admin";
+    // 审计用身份：管理员会话与分享访客要能区分开，日志的 actor 列由服务端判定，
+    // 不接受客户端自报（否则日志里的"谁干的"可以被伪造）。
+    let accessActor = "admin";
 
     if (pathname.startsWith("/api/") && !isPublicApiPath(pathname, method)) {
       const session = await requireApiSession(sessionToken);
@@ -139,6 +142,7 @@ export function createApp() {
         // 这只是混淆（常量公开），真正的机密性靠 TLS 与只读授权。
         attachResponseEncryption(res, getLoginWireKey());
         accessRole = "viewer";
+        accessActor = share.label ? `viewer:${share.label}` : "viewer";
       }
     }
 
@@ -186,7 +190,7 @@ export function createApp() {
       return;
     }
 
-    if (await handleLocalPersistenceRoute(req, res, method, pathname, requestUrl)) {
+    if (await handleLocalPersistenceRoute(req, res, method, pathname, requestUrl, accessActor)) {
       return;
     }
 

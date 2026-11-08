@@ -51,6 +51,26 @@ const categoryTabs = computed(() => [
   })),
 ]);
 
+// 审计身份：谁做的这一步操作。服务端判定，读不到时（旧日志）留给空。
+function actorLabel(actor) {
+  const value = String(actor ?? "").trim();
+
+  if (!value || value === "local") {
+    return "";
+  }
+
+  if (value === "admin") {
+    return t("logs.actorAdmin");
+  }
+
+  if (value.startsWith("viewer:")) {
+    const label = value.slice("viewer:".length).trim();
+    return label ? t("logs.actorViewer", { label }) : t("logs.actorViewerUnnamed");
+  }
+
+  return t("logs.actorLocal", { actor: value });
+}
+
 const emptyMessage = computed(() =>
   searchQuery.value.trim() || activeLevel.value !== "all" || activeCategory.value !== "all"
     ? t("logs.emptyFiltered")
@@ -106,6 +126,9 @@ const emptyMessage = computed(() =>
             </span>
             <span class="logs-page__badge logs-page__badge--category">
               {{ t(`logs.categories.${entry.category}`) }}
+            </span>
+            <span v-if="actorLabel(entry.actor)" class="logs-page__badge logs-page__badge--actor">
+              {{ actorLabel(entry.actor) }}
             </span>
           </div>
 

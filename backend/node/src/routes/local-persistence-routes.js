@@ -16,7 +16,10 @@ import {
   sendProtectedJson,
 } from "../utils/protected-http.js";
 
-export async function handleLocalPersistenceRoute(req, res, method, pathname, url) {
+/**
+ * @param {string} [actor] 服务端判定的审计身份（admin / viewer:<标签>），由 app.js 传入
+ */
+export async function handleLocalPersistenceRoute(req, res, method, pathname, url, actor = "") {
   if (method === "GET" && pathname === "/api/public/preferences") {
     const settings = getStoredSettings();
     sendLoginWireProtectedJson(res, 200, {
@@ -111,7 +114,10 @@ export async function handleLocalPersistenceRoute(req, res, method, pathname, ur
   if (method === "POST" && pathname === "/api/logs") {
     try {
       const body = await readProtectedJsonBody(req, res);
-      appendStoredLog(body?.entry ?? {});
+      const entry = body?.entry ?? {};
+      // actor 一律以服务端判定的会话身份为准：客户端自报的 actor 可伪造，
+      // 写进审计日志等于给"谁干的"开后门。
+      appendStoredLog({ ...entry, actor: actor || entry.actor });
       sendProtectedJson(res, 200, {
         success: true,
         version: APP_VERSION,

@@ -12,6 +12,8 @@ const MAX_LOG_MESSAGE_LENGTH = 4096;
 /** details 序列化后的上限；超长对象同样会放大存储与响应体积。 */
 const MAX_LOG_DETAILS_LENGTH = 16384;
 const DEFAULT_LOG_ACTOR = "local";
+/** actor 是身份标签（admin / viewer:<分享标签>），不需要长文本。 */
+const MAX_LOG_ACTOR_LENGTH = 64;
 
 const database = new DatabaseSync(DATABASE_PATH);
 database.exec(`
@@ -172,7 +174,7 @@ export function appendStoredLog(entry = {}) {
     normalizeString(entry.event, "event"),
     truncateText(normalizeString(entry.message, ""), MAX_LOG_MESSAGE_LENGTH),
     serializeDetails(entry.details),
-    normalizeString(entry.actor, DEFAULT_LOG_ACTOR),
+    truncateText(normalizeString(entry.actor, DEFAULT_LOG_ACTOR), MAX_LOG_ACTOR_LENGTH),
     entry.deviceSerial ? String(entry.deviceSerial) : null,
     entry.deviceName ? String(entry.deviceName) : null,
   );

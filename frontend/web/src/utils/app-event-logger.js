@@ -64,6 +64,8 @@ function decorateServerEntry(entry) {
     event: entry?.event || "event",
     message: entry?.message || "",
     details: normalizeDetails(entry?.details),
+    // actor 由服务端按会话身份写入（admin / viewer:<分享标签>），客户端只展示不修改。
+    actor: entry?.actor ? String(entry.actor) : null,
     deviceSerial: entry?.deviceSerial ?? null,
     deviceName: entry?.deviceName ?? null,
   };

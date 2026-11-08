@@ -15,6 +15,10 @@ export default {
     levelWarn: "Warn",
     levelError: "Error",
     categoryAll: "All categories",
+    actorAdmin: "Admin",
+    actorViewer: "Read-only share ({label})",
+    actorViewerUnnamed: "Read-only share",
+    actorLocal: "{actor}",
     categories: {
       auth: "Auth",
       navigation: "Navigation",

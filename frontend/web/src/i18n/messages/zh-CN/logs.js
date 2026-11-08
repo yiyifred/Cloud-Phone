@@ -15,6 +15,10 @@ export default {
     levelWarn: "Warn",
     levelError: "Error",
     categoryAll: "全部分类",
+    actorAdmin: "管理员",
+    actorViewer: "只读分享（{label}）",
+    actorViewerUnnamed: "只读分享",
+    actorLocal: "{actor}",
     categories: {
       auth: "认证",
       navigation: "导航",
