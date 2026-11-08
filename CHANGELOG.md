@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.25.1 - 2026-11-08
+
+- **租约列表接口**：新增 `GET /api/devices/control`，一次返回全部被占用设备（`mine` 按请求者会话计算）；画廊角标不再按设备逐个发加密请求（24 台 = 24 请求），列表不可用时退回逐台探测
+- 任务单 `tasks/T-423`
+
 ## 1.25.0 - 2026-11-08
 
 **设备控制权租约（新）**
@@ -789,34 +794,3 @@
 - 设置页新增界面语言切换，支持简体中文、English、繁體中文、日本語、한국어
 - 接入 `vue-i18n`：设置、侧栏、主题、登录/改密、设备画廊等核心界面文案多语言化
 - 语言偏好写入 `localStorage`，切换即时生效；日期与设备状态标签随 locale 格式化
-- 设置页改为横向布局：左侧二级菜单（账号 / 外观 / 刷新），右侧分类内容区
-- 外观分类集中语言与主题；账号分类支持会话信息与修改密码；刷新分类独立保存间隔
-
-### Settings i18n & language switcher
-- Language selector on Settings (zh-CN, en-US, zh-TW, ja-JP, ko-KR)
-- `vue-i18n` for shell UI: settings, sidebar, theme, auth, device gallery
-- Persisted locale; date/device labels follow active language
-
-### Settings layout refactor
-- Horizontal settings page with secondary nav: Account, Appearance, Refresh
-- Theme toggle moved from sidebar to Appearance; change password from Account section
-
-## 0.9.8 - 2026-05-27
-
-- 首页左侧“设置”图标改为图标库实现（`lucide-vue-next`），统一线稿风格并提升清晰度
-- 扩展图标库覆盖：设备/返回/终端/旋转/主题等常用图标迁移到 Lucide；补充焦点可见态与按钮/卡片 hover 细节
-
-### Sidebar settings icon
-- Migrate the sidebar settings icon to `lucide-vue-next`
-- Expand Lucide coverage and improve focus/hover interactions
-
-## 0.9.7 - 2026-05-27
-
-- 改进工具栏图标：终端与旋转更清晰、比例更协调
-
-### Toolbar icons
-- Improve terminal and rotate icons for better legibility
-
-## 0.9.6 - 2026-05-27
-
-- 新增 `scripts/` 三平台自动安装向导（Linux / macOS / Windows），命令行伪图形菜单
