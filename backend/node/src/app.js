@@ -7,6 +7,7 @@ import { captureHarmonyScreenshot } from "./services/harmony-device.js";
 import { captureIosScreenshot } from "./services/ios/ios-device.js";
 import { listAllDevices } from "./services/device-list-service.js";
 import { handleAuthRoute } from "./routes/auth-routes.js";
+import { handleShareRoute } from "./routes/share-routes.js";
 import { handleDeviceCastRoute } from "./routes/device-cast-routes.js";
 import { handleDeviceControlRoute } from "./routes/device-control-routes.js";
 import { handleDeviceConnectRoute } from "./routes/device-connect-routes.js";
@@ -16,19 +17,67 @@ import { handleIosDeviceRoute } from "./routes/ios-device-routes.js";
 import { handleIosWdaPipelineRoute } from "./routes/ios-wda-pipeline-routes.js";
 import { handleLocalPersistenceRoute } from "./routes/local-persistence-routes.js";
 import { handleScrcpyRoute } from "./routes/scrcpy-routes.js";
+import { SHARE_COOKIE_NAME } from "./config/auth.js";
 import {
   getSessionTokenFromCookies,
   isPublicApiPath,
   requireApiSession,
 } from "./middleware/api-auth.js";
+import { resolveShareToken } from "./services/share-tokens.js";
+import { isSecureRequest } from "./utils/request-https.js";
 import { parseCookies } from "./utils/cookies.js";
 import { applyCors, rejectOversizedRequest, sendEmpty } from "./utils/http.js";
 import {
   attachResponseEncryption,
+  getLoginWireKey,
   sendLoginWireProtectedJson,
   sendProtectedBuffer,
   sendProtectedJson,
 } from "./utils/protected-http.js";
+
+/**
+ * viewer（只读分享）能碰的接口：只放行读，且排除分享管理与认证管理，
+ * 否则「看一眼画面」的凭据就能给自己续期或改密码。
+ */
+/** 分享 cookie 与管理员会话 cookie 同源同 Path，但作用域只有读：见 isViewerAllowed。 */
+function buildShareCookie(token, maxAgeSeconds, secure) {
+  const parts = [
+    `${SHARE_COOKIE_NAME}=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${Math.max(0, maxAgeSeconds)}`,
+  ];
+
+  if (secure) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
+}
+
+/**
+ * viewer 唯一允许的写操作是「开启/停止自己的投屏观看」：
+ * 不 start 就没有画面可看，不 stop 会话无处释放；两者都不改设备状态（不注入输入）。
+ */
+const VIEWER_ALLOWED_WRITE = [
+  { method: "POST", pattern: /^\/api\/devices\/[^/]+\/cast\/start$/ },
+  { method: "DELETE", pattern: /^\/api\/devices\/[^/]+\/cast\/stop$/ },
+];
+
+function isViewerAllowed(pathname, method) {
+  if (pathname.startsWith("/api/share") || pathname.startsWith("/api/auth")) {
+    return false;
+  }
+
+  if (method === "GET" || method === "HEAD") {
+    return true;
+  }
+
+  return VIEWER_ALLOWED_WRITE.some(
+    (rule) => rule.method === method && rule.pattern.test(pathname),
+  );
+}
 
 function sendUnauthorized(res) {
   sendLoginWireProtectedJson(res, 401, {
@@ -59,13 +108,74 @@ export function createApp() {
       return;
     }
 
+    let accessRole = "admin";
+
     if (pathname.startsWith("/api/") && !isPublicApiPath(pathname, method)) {
       const session = await requireApiSession(sessionToken);
-      if (!session) {
-        sendUnauthorized(res);
+
+      if (session) {
+        attachResponseEncryption(res, session.encryptionKey);
+      } else {
+        // 没有管理员会话时再试只读分享令牌：viewer 只能读，写一律 403
+        const share = resolveShareToken(cookies[SHARE_COOKIE_NAME]);
+
+        if (!share) {
+          sendUnauthorized(res);
+          return;
+        }
+
+        if (!isViewerAllowed(pathname, method)) {
+          sendProtectedJson(res, 403, {
+            success: false,
+            version: APP_VERSION,
+            error: "viewer_forbidden",
+            message: "当前是只读分享访问，无法执行该操作。",
+            role: "viewer",
+          });
+          return;
+        }
+
+        // viewer 也要能解/发加密信封：没有会话密钥时统一用 login-wire key。
+        // 这只是混淆（常量公开），真正的机密性靠 TLS 与只读授权。
+        attachResponseEncryption(res, getLoginWireKey());
+        accessRole = "viewer";
+      }
+    }
+
+    // 分享链接落地页：把 ?token= 换成 HttpOnly cookie 再跳回控制台。
+    // 放在鉴权闸门之前，因为分享链接本身就是凭据；也放在 /api/public 之外，
+    // 避免被 isPublicApiPath 的语义混淆。
+    if (method === "GET" && pathname === "/api/share/redeem") {
+      const token = requestUrl.searchParams.get("token") ?? "";
+      const share = resolveShareToken(token);
+
+      if (!share) {
+        res.writeHead(302, { Location: "/?share=invalid" });
+        res.end();
         return;
       }
-      attachResponseEncryption(res, session.encryptionKey);
+
+      const maxAge = Math.max(0, Math.floor((share.expiresAt - Date.now()) / 1000));
+      res.writeHead(302, {
+        Location: "/?share=1",
+        "Set-Cookie": buildShareCookie(token, maxAge, isSecureRequest(req)),
+      });
+      res.end();
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/access") {
+      sendProtectedJson(res, 200, {
+        success: true,
+        version: APP_VERSION,
+        role: accessRole,
+        readOnly: accessRole === "viewer",
+      });
+      return;
+    }
+
+    if (await handleShareRoute(req, res, method, pathname)) {
+      return;
     }
 
     if (handleHostRoute(req, res, method, pathname)) {

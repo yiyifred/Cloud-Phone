@@ -256,6 +256,13 @@ Images are embedded in the corresponding feature sections below.
 - Read-only sessions see navigation, volume and rotation greyed out, while screenshots, file browsing and the terminal keep working
 - Advisory by default (warn only); set `CLOUD_PHONE_CONTROL_ENFORCE=1` to have the server reject write operations from non-holders
 
+### Read-only sharing (1.26.0)
+
+- Settings can mint a time-limited read-only link (1/8/24/72 hours); the server stores only a hash, the plaintext token is shown once and can be revoked at any time
+- Opening the link lands straight in a read-only console: cast view and screenshots work, logs are visible, but controlling the device, installing apps, transferring files and the terminal are blocked
+- Write requests from a viewer return `403 viewer_forbidden`; on the WebSocket side control frames are dropped with `control-denied`
+- No need to hand out the admin password just to let someone watch a screen
+
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ---

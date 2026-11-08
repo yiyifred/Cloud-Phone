@@ -28,6 +28,7 @@ import { createDefaultMirrorSettings } from "../utils/mirror-cast-defaults.js";
 import { DEFAULT_CAST_MODE, DEVICE_CAST_MODES } from "../utils/device-cast-modes.js";
 import { getErrorMessage } from "../utils/api.js";
 import { logDebug, logError, logInfo, logWarn } from "../utils/app-event-logger.js";
+import { useAccessRole } from "../composables/useAccessRole.js";
 import { useAppFeedback } from "../composables/useAppFeedback.js";
 import { WsScrcpyAnnexBPlayer } from "../utils/ws-scrcpy-annexb-player.js";
 import { WsScrcpyAudioCanvas } from "../utils/ws-scrcpy-audio-canvas.js";
@@ -43,6 +44,8 @@ const emit = defineEmits(["close"]);
 
 const feedback = useAppFeedback();
 const { t } = useI18n();
+// 只读分享访问：画面能看、截图能存，其余写入口一律置灰
+const { readOnly } = useAccessRole();
 
 const isCasting = ref(false);
 const castBusy = ref(false);
@@ -153,6 +156,10 @@ const CONTROL_MESSAGE_ACTION_IDS = new Set([
   "volume",
 ]);
 
+// viewer 除了「往设备发指令」，还拿不到安装/上传/终端入口：
+// 这些弹窗里的每个动作都是写操作，服务端会 403，不如在入口处就说清楚
+const VIEWER_BLOCKED_ACTION_IDS = new Set([...CONTROL_MESSAGE_ACTION_IDS, "files", "apps", "terminal"]);
+
 function handleControlReadonlyChange(value) {
   controlReadonly.value = Boolean(value);
 }
@@ -162,6 +169,10 @@ function handleControlHolderChange(value) {
 }
 
 function toolbarActionDisabled(action) {
+  if (readOnly.value && VIEWER_BLOCKED_ACTION_IDS.has(action.id)) {
+    return true;
+  }
+
   if (controlReadonly.value && CONTROL_MESSAGE_ACTION_IDS.has(action.id)) {
     return true;
   }
@@ -170,6 +181,10 @@ function toolbarActionDisabled(action) {
 }
 
 function toolbarActionTitle(action) {
+  if (readOnly.value && VIEWER_BLOCKED_ACTION_IDS.has(action.id)) {
+    return t("access.readOnlyAction");
+  }
+
   if (controlReadonly.value && CONTROL_MESSAGE_ACTION_IDS.has(action.id)) {
     return t("devices.control.readonlyHint", {
       name: controlHolderName.value || t("devices.control.anonymousHolder"),
@@ -577,7 +592,7 @@ async function handleViewportFullscreenChange(isFullscreen) {
         :long-horizontal="screenLongHorizontal"
         :floating="isViewportFullscreen"
       >
-        <template #lease>
+        <template v-if="!readOnly" #lease>
           <DeviceControlLeaseButton
             :device="device"
             @update:readonly="handleControlReadonlyChange"
@@ -647,17 +662,24 @@ async function handleViewportFullscreenChange(isFullscreen) {
     </div>
 
     <DeviceFileExplorer
+      v-if="!readOnly"
       :device="device"
       :open="filesExplorerOpen"
       :open-path="filesExplorerPath"
       @close="handleFilesExplorerClose"
     />
     <DeviceAppManager
+      v-if="!readOnly"
       :device="device"
       :open="appsManagerOpen"
       @close="appsManagerOpen = false"
       @open-files="handleOpenAppDataInFiles"
     />
-    <DeviceTerminal :device="device" :open="terminalOpen" @close="terminalOpen = false" />
+    <DeviceTerminal
+      v-if="!readOnly"
+      :device="device"
+      :open="terminalOpen"
+      @close="terminalOpen = false"
+    />
   </section>
 </template>

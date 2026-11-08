@@ -24,6 +24,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["change-password", "logout"]);
@@ -44,16 +48,20 @@ watch(iconHelperPreference, (value) => {
 
 <template>
   <div class="settings-section shell-panel-content">
+    <!-- viewer 不是账号：密码、会话、图标服务偏好都归分享者管 -->
+    <p v-if="readOnly" class="share-intro">{{ t("access.viewerAccount") }}</p>
+
     <dl class="shell-form-rows">
-      <div class="shell-form-row">
+      <div v-if="!readOnly" class="shell-form-row">
         <dt class="shell-form-row__label">{{ t("settings.passwordStatus") }}</dt>
         <dd><NTag round type="success" size="small">{{ passwordStatusText }}</NTag></dd>
       </div>
-      <div class="shell-form-row">
+      <div v-if="!readOnly" class="shell-form-row">
         <dt class="shell-form-row__label">{{ t("settings.sessionExpiry") }}</dt>
         <dd><NTag round size="small">{{ formatDate(sessionExpiresAt) }}</NTag></dd>
       </div>
-      <div class="shell-form-row">
+      <!-- 图标服务偏好是写操作（保存到后端），只读访问下不提供 -->
+      <div v-if="!readOnly" class="shell-form-row">
         <dt class="shell-form-row__label">
           <span class="form-label-row">
             {{ t("settings.iconHelper") }}
@@ -74,7 +82,7 @@ watch(iconHelperPreference, (value) => {
       </div>
     </dl>
 
-    <div class="shell-form-actions shell-form-actions--stack">
+    <div v-if="!readOnly" class="shell-form-actions shell-form-actions--stack">
       <UiButton variant="primary" @click="emit('change-password')">
         {{ t("settings.sections.account.changePassword") }}
       </UiButton>

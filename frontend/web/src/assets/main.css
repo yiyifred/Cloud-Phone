@@ -3189,3 +3189,192 @@ code {
     font-size: 0.66rem;
   }
 }
+
+/* ── 只读分享（T-425）─────────────────────────────────────────────
+   分享访问的观感必须和「管理员丢了权限」区分开：横幅用品牌色而非错误色，
+   列表/表单沿用设置页的既有节奏，只有分享链接本身需要等宽字体。 */
+
+.read-only-banner {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  margin: 0 var(--sp-3);
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
+}
+
+.read-only-banner__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.read-only-banner__text strong {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: var(--fs-sm);
+}
+
+.read-only-banner__text p {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+.share-intro,
+.share-denied {
+  margin: 0 0 var(--sp-2);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+/* 无权限时用警示色：这是「你现在不是管理员」，不是普通说明 */
+.share-denied {
+  padding: 0.6rem 0.75rem;
+  border: 1px dashed color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  color: var(--warning);
+}
+
+.share-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* 明文链接只出现一次，视觉上必须比普通输入框更醒目，且允许横向滚动看清完整 URL */
+.share-fresh {
+  margin: var(--sp-3) 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--success) 34%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--success) 8%, var(--bg-elevated));
+}
+
+.share-fresh__title {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-heading);
+  font-size: var(--fs-sm);
+}
+
+.share-fresh__hint,
+.share-fresh__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  line-height: 1.55;
+}
+
+.share-fresh__row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.55rem 0 0.35rem;
+}
+
+.share-fresh__link {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.share-list__title {
+  margin: var(--sp-3) 0 0.4rem;
+  font-family: var(--font-heading);
+  font-size: var(--fs-sm);
+}
+
+.share-list__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.share-list__item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.share-list__main {
+  min-width: 0;
+}
+
+.share-list__label {
+  display: block;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-list__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.6rem;
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 560px) {
+  .read-only-banner {
+    margin: 0 var(--sp-2);
+    padding: 0.6rem 0.7rem;
+  }
+
+  /* 手机上按钮换行会顶掉备注名，改为上下堆叠 */
+  .share-list__item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .share-fresh__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* 只读访问时「添加设备」不可用：保留位置（布局不跳），但明确按不动 */
+.panel-header__add-device:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.panel-header__add-device:disabled:hover {
+  background: var(--bg-elevated);
+  color: var(--muted);
+}

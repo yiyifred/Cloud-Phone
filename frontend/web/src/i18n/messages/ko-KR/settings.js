@@ -8,6 +8,7 @@ export default {
       account: "계정",
       appearance: "외관",
       refresh: "새로고침",
+      share: "공유",
     },
     sections: {
       account: {
@@ -23,6 +24,10 @@ export default {
       refresh: {
         title: "새로고침",
         desc: "기기 갤러리 목록과 스크린샷 자동 새로고침 간격을 설정합니다.",
+      },
+      share: {
+        title: "공유",
+        desc: "읽기 전용 공유 링크를 만들어 비밀번호 없이 화면을 볼 수 있게 합니다(기간 제한, 폐기 가능).",
       },
     },
     language: "UI 언어",

@@ -43,6 +43,10 @@ const props = defineProps({
     type: Function,
     required: true,
   },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["refresh", "open-device"]);
@@ -139,6 +143,12 @@ async function handleDisconnectDevice() {
     return;
   }
 
+  // 断开是写操作（会重启 adbd），只读分享访问下必须明确拒绝而不是静默失败
+  if (props.readOnly) {
+    actionFeedback.value = t("access.readOnlyAction");
+    return;
+  }
+
   const confirmed = window.confirm(
     t("devices.contextMenu.disconnectConfirm", { name: device.displayName }),
   );
@@ -179,7 +189,8 @@ async function handleDisconnectDevice() {
           type="button"
           class="panel-header__add-device"
           :aria-label="t('devices.addDevice')"
-          :title="t('devices.addDevice')"
+          :title="readOnly ? t('access.readOnlyAction') : t('devices.addDevice')"
+          :disabled="readOnly"
           @click="showAddDeviceModal = true"
         >
           <AppIcon name="plus" />
@@ -213,7 +224,7 @@ async function handleDisconnectDevice() {
       :icon="MonitorSmartphone"
       :title="t('devices.notFound')"
       :description="t('devices.connectHint')"
-      :action-label="t('devices.addDevice')"
+      :action-label="readOnly ? '' : t('devices.addDevice')"
       @action="showAddDeviceModal = true"
     />
 
@@ -242,7 +253,7 @@ async function handleDisconnectDevice() {
     />
 
     <AddDeviceModal
-      v-if="showAddDeviceModal"
+      v-if="showAddDeviceModal && !readOnly"
       :devices="devices"
       @close="showAddDeviceModal = false"
     />

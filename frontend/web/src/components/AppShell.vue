@@ -1,12 +1,14 @@
 <script setup>
-import { onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import AuthLayer from "./AuthLayer.vue";
 import AuthPasswordModal from "./AuthPasswordModal.vue";
 import ConsoleLayout from "./ConsoleLayout.vue";
 import IconHelperGatePanel from "./IconHelperGatePanel.vue";
+import ReadOnlyBanner from "./ReadOnlyBanner.vue";
 import SkeletonCard from "./ui/SkeletonCard.vue";
+import { markViewerSession, useAccessRole } from "../composables/useAccessRole.js";
 import { useAppFeedback } from "../composables/useAppFeedback.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useDevices } from "../composables/useDevices.js";
@@ -42,6 +44,8 @@ const {
 
 const { t } = useI18n();
 const feedback = useAppFeedback();
+// 角色是模块级单例：横幅、画廊、工具栏、设置页共读同一个值
+const { readOnly, refresh: refreshAccessRole } = useAccessRole();
 
 const activeTab = ref("devices");
 const selectedDevice = ref(null);
@@ -64,6 +68,8 @@ const {
   () => authState.authenticated && activeTab.value === "devices" && !selectedDevice.value,
 );
 
+// 预热会装图标服务（写操作），只读访问下不触发
+const warmDevices = computed(() => (readOnly.value ? [] : devices.value));
 const {
   consentDialogOpen,
   phase,
@@ -71,7 +77,7 @@ const {
   progressPercent,
   showProgressUi,
   answerConsent,
-} = useOnlineDevicesAppsWarm(devices);
+} = useOnlineDevicesAppsWarm(warmDevices);
 
 function applySettingsToForm(settings) {
   settingsForm.deviceListIntervalSeconds = normalizeDeviceInterval(
@@ -91,6 +97,12 @@ function applyRuntimeStateToUi(runtimeState) {
 }
 
 async function hydrateAuthenticatedPersistence() {
+  // viewer 无写权限（POST /api/local-persistence 会 403）：用本地缓存还原即可
+  if (readOnly.value) {
+    applyRuntimeStateToUi(getCachedRuntimeState());
+    return;
+  }
+
   try {
     await migrateLegacyBrowserPersistence();
     const payload = await hydrateLocalPersistence();
@@ -107,9 +119,18 @@ async function bootAuthenticatedConsole() {
 }
 
 onMounted(async () => {
+  // 先问角色：分享链接进来的是 viewer，不能走「没有会话 → 弹登录框」那条路
+  if ((await refreshAccessRole()).readOnly) {
+    markViewerSession(authState);
+    logInfo("auth", "auth.share.enter", "通过只读分享链接进入控制台");
+    await bootAuthenticatedConsole();
+    return;
+  }
+
   const authenticated = await loadSession();
   if (authenticated) {
     await bootAuthenticatedConsole();
+    void refreshAccessRole();
   }
 });
 
@@ -123,7 +144,7 @@ watch(
 );
 
 watch(selectedDevice, (device, previousDevice) => {
-  if (authState.authenticated) {
+  if (authState.authenticated && !readOnly.value) {
     void persistLocalStatePatch({
       runtimeState: {
         selectedDeviceSerial: device?.serial ?? "",
@@ -136,7 +157,7 @@ watch(selectedDevice, (device, previousDevice) => {
 });
 
 watch(activeTab, (tab) => {
-  if (!authState.authenticated) {
+  if (!authState.authenticated || readOnly.value) {
     return;
   }
   void persistLocalStatePatch({
@@ -150,6 +171,7 @@ watch(activeTab, (tab) => {
 async function handleLogin() {
   if (await submitLogin()) {
     await bootAuthenticatedConsole();
+    void refreshAccessRole();
   }
 }
 
@@ -167,6 +189,7 @@ async function handleLogout() {
   logInfo("auth", "auth.logout", "退出登录");
   await logout();
   stopDevices();
+  void refreshAccessRole();
 }
 
 async function saveSettingsForm() {
@@ -219,24 +242,28 @@ async function saveSettingsForm() {
       </p>
       <SkeletonCard :count="6" height="16rem" />
     </div>
-    <ConsoleLayout
-      v-else-if="authState.authenticated || authState.reauthenticating"
-      v-model:active-tab="activeTab"
-      v-model:selected-device="selectedDevice"
-      :devices="devices"
-      :device-loading="deviceLoading"
-      :device-error="deviceError"
-      :last-refreshed-at="lastRefreshedAt"
-      :adb-path="adbPath"
-      :screenshot-url="screenshotUrl"
-      :settings-form="settingsForm"
-      :password-status-text="passwordStatusText"
-      :session-expires-at="authState.sessionExpiresAt"
-      @logout="handleLogout"
-      @save-settings="saveSettingsForm"
-      @change-password="openPasswordChange"
-      @refresh-devices="refreshDevices"
-    />
+    <template v-else-if="authState.authenticated || authState.reauthenticating">
+      <!-- 只读分享横幅放在控制台之上：一进来就知道「这是围观，不是后台」 -->
+      <ReadOnlyBanner v-if="readOnly" />
+      <ConsoleLayout
+        v-model:active-tab="activeTab"
+        v-model:selected-device="selectedDevice"
+        :devices="devices"
+        :device-loading="deviceLoading"
+        :device-error="deviceError"
+        :last-refreshed-at="lastRefreshedAt"
+        :adb-path="adbPath"
+        :screenshot-url="screenshotUrl"
+        :settings-form="settingsForm"
+        :password-status-text="passwordStatusText"
+        :session-expires-at="authState.sessionExpiresAt"
+        :read-only="readOnly"
+        @logout="handleLogout"
+        @save-settings="saveSettingsForm"
+        @change-password="openPasswordChange"
+        @refresh-devices="refreshDevices"
+      />
+    </template>
     <div
       v-if="showPasswordChangeModal && authState.authenticated"
       class="modal-layer"
@@ -254,7 +281,7 @@ async function saveSettingsForm() {
       </section>
     </div>
     <IconHelperGatePanel
-      v-if="authState.authenticated"
+      v-if="authState.authenticated && !readOnly"
       :consent-open="consentDialogOpen"
       :busy="showProgressUi"
       :progress-percent="progressPercent"

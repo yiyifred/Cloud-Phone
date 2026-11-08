@@ -1,4 +1,6 @@
 export const AUTH_COOKIE_NAME = "cloud_phone_session";
+/** 只读分享令牌的 cookie：与管理员会话分开，便于「看一眼画面」而不交出写权限。 */
+export const SHARE_COOKIE_NAME = "cloud_phone_share";
 export const DEFAULT_PASSWORD = "admin";
 export const PASSWORD_MIN_LENGTH = 6;
 
