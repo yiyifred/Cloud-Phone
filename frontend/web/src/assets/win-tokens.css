@@ -1,0 +1,148 @@
+/* T-434：Windows 桌面壳（windows-desktop.css）的语义色 token。
+   拆出来单独放，是因为这些颜色原本是 80 处硬编码 hex / rgba，
+   既要浅色保持像素级不变（light 值 == 原字面量），又要深色能整体换一套。
+   light 值 = 改造前的原值，深色值按 AA（正文 ≥4.5:1 / 图标 ≥3:1）挑选。 */
+:root,
+[data-theme="light"] {
+  /* 壁纸与桌面 */
+  --win-wallpaper-start: #9fd0ff;
+  --win-wallpaper-mid: #6eb5ff;
+  --win-wallpaper-end: #4f95e8;
+  --win-wallpaper-glow: rgba(255, 255, 255, 0.55);
+  --win-wallpaper-glow-2: rgba(120, 180, 255, 0.65);
+
+  /* 表面（窗口/开始菜单/浮出层/控件） */
+  --win-surface: #ffffff;
+  --win-surface-alt: #f3f3f3;
+  --win-surface-subtle: #f9f9f9;
+  --win-surface-sunken: #f7f7f7;
+  --win-surface-hover: #e8e8e8;
+  --win-surface-icon: #e8e8e8;
+  --win-surface-icon-2: #dfe6ee;
+  --win-surface-icon-3: #d9e2ec;
+
+  /* 文本 */
+  --win-text: #1f1f1f;
+  --win-text-secondary: #666666;
+  --win-text-tertiary: #888888;
+  --win-text-quiet: #777777;
+  --win-text-control: #444444;
+  --win-text-disabled: #b8b8b8;
+  /* 实心色块（任务栏今日胶囊 #0067c0、关闭按钮 #e81123）上的文字保持白色 */
+  --win-text-on-solid: #ffffff;
+
+  /* 描边与交互叠层 */
+  --win-border: #e5e5e5;
+  --win-border-subtle: #ececec;
+  --win-border-hairline: rgba(0, 0, 0, 0.06);
+  --win-border-hairline-2: rgba(0, 0, 0, 0.08);
+  --win-hover-overlay: rgba(0, 0, 0, 0.045);
+  --win-hover-overlay-2: rgba(0, 0, 0, 0.04);
+  --win-hover-overlay-3: rgba(0, 0, 0, 0.06);
+  --win-hover-fill: rgba(255, 255, 255, 0.55);
+  --win-hover-fill-2: rgba(255, 255, 255, 0.72);
+  --win-hover-fill-3: rgba(255, 255, 255, 0.78);
+
+  /* 强调色（Windows 蓝） */
+  --win-accent: #0078d4;
+  --win-accent-strong: #005a9e;
+  --win-accent-taskbar: #0067c0;
+  --win-accent-soft: #e8f1fb;
+  --win-accent-tile: rgba(0, 120, 212, 0.14);
+  --win-accent-ring: rgba(0, 120, 212, 0.18);
+  --win-link: #2b6ea8;
+
+  /* 危险色 */
+  --win-danger: #c42b1c;
+  --win-danger-strong: #e81123;
+
+  /* 任务栏 */
+  --win-taskbar-bg: rgba(243, 243, 243, 0.82);
+  --win-taskbar-border: rgba(255, 255, 255, 0.45);
+
+  /* 窗口与浮层 */
+  --win-window-bg: #ffffff;
+  --win-window-border: rgba(0, 0, 0, 0.18);
+  --win-window-border-focus: rgba(0, 0, 0, 0.28);
+  --win-window-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  --win-window-shadow-focus: 0 12px 36px rgba(0, 0, 0, 0.28);
+  --win-popover-bg: rgba(249, 249, 249, 0.98);
+  --win-popover-shadow: 0 10px 38px rgba(0, 0, 0, 0.18);
+
+  /* 画布与滑块 */
+  --win-canvas: #111111;
+  --win-canvas-deep: #000000;
+  --win-canvas-scrim: rgba(0, 0, 0, 0.35);
+  --win-canvas-text: rgba(255, 255, 255, 0.7);
+  --win-track: #dddddd;
+  --win-thumb-border: #ffffff;
+}
+
+[data-theme="dark"] {
+  /* 壁纸压到深海军蓝：桌面图标/任务栏文字才拉得开对比度 */
+  --win-wallpaper-start: #1b2a44;
+  --win-wallpaper-mid: #14213a;
+  --win-wallpaper-end: #0e1a30;
+  --win-wallpaper-glow: rgba(76, 194, 255, 0.1);
+  --win-wallpaper-glow-2: rgba(64, 120, 255, 0.16);
+
+  --win-surface: #1f2430;
+  --win-surface-alt: #262c38;
+  --win-surface-subtle: #232935;
+  --win-surface-sunken: #202531;
+  --win-surface-hover: #333b49;
+  --win-surface-icon: #2d3441;
+  --win-surface-icon-2: #2f3745;
+  --win-surface-icon-3: #2f3745;
+
+  /* 正文 #e9eef6 on #1f2430 ≈ 12.4:1；次级 ≈ 7.2:1；三级 ≈ 5.3:1 */
+  --win-text: #e9eef6;
+  --win-text-secondary: #aab5c4;
+  /* 三级文字 #9dabbd 在深色各层表面（#202531~#303641）上最低 5.2:1，留足余量 */
+  --win-text-tertiary: #9dabbd;
+  --win-text-quiet: #9dabbd;
+  --win-text-control: #c6d0dd;
+  --win-text-disabled: #6f7c8c;
+  --win-text-on-solid: #ffffff;
+
+  --win-border: #39414f;
+  --win-border-subtle: #2e3542;
+  --win-border-hairline: rgba(255, 255, 255, 0.1);
+  --win-border-hairline-2: rgba(255, 255, 255, 0.12);
+  --win-hover-overlay: rgba(255, 255, 255, 0.08);
+  --win-hover-overlay-2: rgba(255, 255, 255, 0.07);
+  --win-hover-overlay-3: rgba(255, 255, 255, 0.12);
+  --win-hover-fill: rgba(255, 255, 255, 0.1);
+  --win-hover-fill-2: rgba(255, 255, 255, 0.16);
+  --win-hover-fill-3: rgba(255, 255, 255, 0.14);
+
+  /* #4cc2ff on #1f2430 ≈ 7.9:1，亮蓝替代 #0078d4（深底上只有 3.1:1） */
+  --win-accent: #4cc2ff;
+  --win-accent-strong: #8fd8ff;
+  --win-accent-taskbar: #2b6fa8;
+  --win-accent-soft: rgba(76, 194, 255, 0.14);
+  --win-accent-tile: rgba(76, 194, 255, 0.2);
+  --win-accent-ring: rgba(76, 194, 255, 0.3);
+  --win-link: #8fd8ff;
+
+  --win-danger: #ff9aa3;
+  --win-danger-strong: #e81123;
+
+  --win-taskbar-bg: rgba(18, 23, 31, 0.86);
+  --win-taskbar-border: rgba(255, 255, 255, 0.1);
+
+  --win-window-bg: #1f2430;
+  --win-window-border: rgba(255, 255, 255, 0.14);
+  --win-window-border-focus: rgba(76, 194, 255, 0.38);
+  --win-window-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
+  --win-window-shadow-focus: 0 14px 40px rgba(0, 0, 0, 0.62);
+  --win-popover-bg: rgba(30, 36, 46, 0.98);
+  --win-popover-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+
+  --win-canvas: #05070a;
+  --win-canvas-deep: #000000;
+  --win-canvas-scrim: rgba(0, 0, 0, 0.45);
+  --win-canvas-text: rgba(255, 255, 255, 0.78);
+  --win-track: #3a4353;
+  --win-thumb-border: #1f2430;
+}

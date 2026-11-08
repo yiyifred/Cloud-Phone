@@ -1,0 +1,259 @@
+/* T-434：深色模式组件级收口。
+   只写深色作用域的修补，颜色值统一走 win-tokens.css 的 --win-* 语义 token。
+   选择器一律加 `html[data-theme="dark"]` 前缀：windows-desktop.css 在 main.js 里晚于
+   本文件导入，靠 (0,2,1) > (0,2,0) 的特异度取胜，避免依赖导入顺序。
+   —— 浅色模式不命中任何一条，不会回归。 */
+
+/* 主题切换过渡：只过渡颜色类属性（180ms < 200ms），不做布局动画。
+   reduced-motion 下整块跳过；base.css 的 *{transition-duration:.01ms} 是第二道保险。 */
+@media (prefers-reduced-motion: no-preference) {
+  .multi-app-desktop,
+  .multi-app-desktop__wallpaper,
+  .win11-taskbar,
+  .win11-window,
+  .win11-window__titlebar,
+  .win11-window__body,
+  .win11-taskbar__btn,
+  .win11-taskbar__app,
+  .win11-start-menu,
+  .win11-start-menu__app,
+  .win11-flyout,
+  .win11-quick-settings,
+  .win11-date-flyout__panel,
+  .win11-date-flyout__notification {
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+}
+
+/* —— 桌面壳：深色壁纸下补一圈内描边，和宿主页面（浅色面板）分开 —— */
+html[data-theme="dark"] .multi-app-desktop {
+  color-scheme: dark;
+  background: var(--win-wallpaper-mid);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* 深色壁纸中央压一点暗角，避免大面积纯色发灰 */
+html[data-theme="dark"] .multi-app-desktop__wallpaper {
+  background:
+    radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.45), transparent 60%),
+    radial-gradient(circle at 72% 18%, var(--win-wallpaper-glow), transparent 34%),
+    radial-gradient(circle at 28% 68%, var(--win-wallpaper-glow-2), transparent 38%),
+    linear-gradient(
+      145deg,
+      var(--win-wallpaper-start) 0%,
+      var(--win-wallpaper-mid) 38%,
+      var(--win-wallpaper-end) 100%
+    );
+}
+
+/* —— 任务栏：深色玻璃 + 上边缘高光，和壁纸分层 —— */
+html[data-theme="dark"] .win11-taskbar {
+  background: var(--win-taskbar-bg);
+  border-top-color: var(--win-taskbar-border);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] .win11-taskbar__btn,
+html[data-theme="dark"] .win11-taskbar__tray-btn,
+html[data-theme="dark"] .win11-taskbar__sys-cell,
+html[data-theme="dark"] .win11-taskbar__clock,
+html[data-theme="dark"] .win11-taskbar__app {
+  color: var(--win-text);
+}
+
+html[data-theme="dark"] .win11-taskbar__btn:hover,
+html[data-theme="dark"] .win11-taskbar__btn.is-active,
+html[data-theme="dark"] .win11-taskbar__tray-btn:hover,
+html[data-theme="dark"] .win11-taskbar__sys-cell:hover,
+html[data-theme="dark"] .win11-taskbar__sys-cell.is-active,
+html[data-theme="dark"] .win11-taskbar__clock:hover,
+html[data-theme="dark"] .win11-taskbar__clock.is-active {
+  background: var(--win-hover-overlay);
+}
+
+/* 运行中应用的高亮：亮色主题原本靠白底，深色改用半透明白 */
+html[data-theme="dark"] .win11-taskbar__app:hover {
+  background: var(--win-hover-fill);
+}
+
+html[data-theme="dark"] .win11-taskbar__app.is-active {
+  background: var(--win-hover-fill-2);
+  box-shadow: inset 0 -2px 0 var(--win-accent);
+}
+
+html[data-theme="dark"] .win11-taskbar__app-icon {
+  background: var(--win-surface-icon-3);
+  color: var(--win-text-control);
+}
+
+/* —— 多应用窗口：描边 + 双层阴影，深色下窗口才浮得起来 —— */
+html[data-theme="dark"] .win11-window {
+  background: var(--win-window-bg);
+  border-color: var(--win-window-border);
+  box-shadow:
+    var(--win-window-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="dark"] .win11-window.is-focused {
+  border-color: var(--win-window-border-focus);
+  box-shadow:
+    var(--win-window-shadow-focus),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+html[data-theme="dark"] .win11-window.is-maximized {
+  border-color: var(--win-border-subtle);
+}
+
+/* —— 窗口标题栏：未聚焦 / 聚焦两态在深色下都要可读 —— */
+html[data-theme="dark"] .win11-window__titlebar {
+  background: var(--win-surface-alt);
+  border-bottom: 1px solid var(--win-border-subtle);
+}
+
+html[data-theme="dark"] .win11-window.is-focused .win11-window__titlebar {
+  background: var(--win-accent-soft);
+  border-bottom-color: var(--win-border);
+}
+
+html[data-theme="dark"] .win11-window__title {
+  color: var(--win-text);
+}
+
+html[data-theme="dark"] .win11-window__back,
+html[data-theme="dark"] .win11-window__chrome-btn {
+  color: var(--win-text);
+}
+
+/* 关窗外：浅色下用白字压 #e81123，深色保持一致（红块本身就是实色） */
+html[data-theme="dark"] .win11-window__chrome-btn.is-close:hover {
+  background: var(--win-danger-strong);
+  color: var(--win-text-on-solid);
+}
+
+html[data-theme="dark"] .win11-window__app-icon {
+  background: var(--win-surface-icon-2);
+  color: var(--win-text-control);
+}
+
+/* —— 多应用画布：深色下画布与窗口 body 不能出现亮缝 —— */
+html[data-theme="dark"] .win11-window__body,
+html[data-theme="dark"] .multi-app-window-stream,
+html[data-theme="dark"] .multi-app-window-stream__canvas {
+  background: var(--win-canvas-deep);
+}
+
+html[data-theme="dark"] .multi-app-window-stream__status {
+  color: var(--win-canvas-text);
+  background: var(--win-canvas-scrim);
+}
+
+/* —— 开始菜单 / 快捷设置 / 日期浮层：深色面板补内描边（不改尺寸，用 inset 阴影） —— */
+html[data-theme="dark"] .win11-start-menu,
+html[data-theme="dark"] .win11-flyout,
+html[data-theme="dark"] .win11-quick-settings,
+html[data-theme="dark"] .win11-date-flyout,
+html[data-theme="dark"] .win11-date-flyout__panel {
+  color: var(--win-text);
+  box-shadow: inset 0 0 0 1px var(--win-border-subtle);
+}
+
+html[data-theme="dark"] .win11-start-menu {
+  background: var(--win-surface-alt);
+}
+
+html[data-theme="dark"] .win11-start-menu__app:hover {
+  background: var(--win-hover-fill-3);
+}
+
+html[data-theme="dark"] .win11-start-menu__search-item {
+  background: var(--win-surface);
+  color: var(--win-text);
+  border-left-color: var(--win-accent);
+}
+
+html[data-theme="dark"] .win11-start-menu__search-item:hover {
+  background: var(--win-surface-hover);
+}
+
+html[data-theme="dark"] .win11-start-menu__search-input,
+html[data-theme="dark"] .win11-flyout__action,
+html[data-theme="dark"] .win11-date-flyout__icon-btn {
+  background: var(--win-surface);
+  color: var(--win-text);
+  border-color: var(--win-border);
+}
+
+html[data-theme="dark"] .win11-start-menu__search-input::placeholder {
+  color: var(--win-text-tertiary);
+}
+
+html[data-theme="dark"] .win11-start-menu__footer {
+  background: rgba(255, 255, 255, 0.04);
+  border-top-color: var(--win-border-subtle);
+}
+
+html[data-theme="dark"] .win11-start-menu__power,
+html[data-theme="dark"] .win11-quick-settings__slider-icon {
+  color: var(--win-text);
+}
+
+/* 快捷设置磁贴：选中态用亮蓝（#4cc2ff），文字走 accent-strong 保证 ≥4.5:1 */
+html[data-theme="dark"] .win11-quick-settings__tile {
+  background: var(--win-hover-overlay-2);
+  color: var(--win-text);
+}
+
+html[data-theme="dark"] .win11-quick-settings__tile.is-on {
+  background: var(--win-accent-tile);
+  color: var(--win-accent-strong);
+}
+
+html[data-theme="dark"] .win11-quick-settings__tile small,
+html[data-theme="dark"] .win11-quick-settings__tile.is-on small {
+  color: var(--win-text-secondary);
+}
+
+html[data-theme="dark"] .win11-quick-settings__range::-webkit-slider-thumb {
+  background: var(--win-accent);
+  border-color: var(--win-thumb-border);
+}
+
+/* 通知卡片：半透明白在深色下会发灰，换成 token 叠层 */
+html[data-theme="dark"] .win11-date-flyout__notification {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .win11-date-flyout__notification-main p,
+html[data-theme="dark"] .win11-date-flyout__notification-top strong {
+  color: var(--win-text);
+}
+
+html[data-theme="dark"] .win11-date-flyout__calendar-body {
+  border-top-color: var(--win-border-subtle);
+}
+
+/* 今日胶囊在深色下用深一档的实色蓝，白字保持 ≥4.5:1 */
+html[data-theme="dark"] .win11-date-flyout__day.is-today {
+  background: var(--win-accent-taskbar);
+  color: var(--win-text-on-solid);
+}
+
+/* 深色滚动条：默认浅色滚动条在深面板上非常刺眼 */
+html[data-theme="dark"] .win11-start-menu__body,
+html[data-theme="dark"] .win11-date-flyout__notifications-body,
+html[data-theme="dark"] .win11-taskbar__apps {
+  scrollbar-color: var(--win-border) transparent;
+}
+
+/* Naive popover 外壳（任务栏托盘）：深色下描边与阴影跟随 token */
+html[data-theme="dark"] .win11-taskbar-popover .n-popover {
+  border-color: var(--win-border) !important;
+  box-shadow: var(--win-popover-shadow) !important;
+  background: var(--win-popover-bg) !important;
+}

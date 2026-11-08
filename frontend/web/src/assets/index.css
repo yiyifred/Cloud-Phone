@@ -18,3 +18,6 @@
 @import "./share.css";
 /* 新增（非拆分产物）：移动端/触屏触控目标 ≥44px，见 U-19 */
 @import "./touch-targets.css";
+/* T-434：Windows 桌面壳语义色 token + 深色组件级修补 */
+@import "./win-tokens.css";
+@import "./theme-dark.css";
