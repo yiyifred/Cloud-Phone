@@ -528,3 +528,32 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 
 - 真正的 H.265/AV1 解码（需要解析 hvcC/av1C 并从 SPS/VPS/PPS 构造配置），属投屏底座升级，与 scrcpy 4.1+ 的 `--video-codec` 能力对齐后再做；
 - 桌面端（scrcpy/escrcpy）不受此闸门影响，仍可用 H.265。
+
+## 16. v1.27.0 进展（审计身份 / 确认框 / 工程收敛）
+
+### 16.1 落地内容
+
+| 项 | 结果 | 关键位置 |
+|---|---|---|
+| 审计身份（S-16 收尾） | `actor` 由服务端判定：管理员 `admin`、分享访客 `viewer:<备注名>`；客户端自报值被覆盖；长度上限 64 | backend/node/src/app.js `accessActor`、routes/local-persistence-routes.js、services/local-persistence-logs.js |
+| 日志身份徽章 | 日志行在等级/分类之后追加「管理员」/「只读分享（备注）」徽章，`local` 与空值不显示 | components/LogsPanel.vue、utils/app-event-logger.js `decorateServerEntry` |
+| 统一确认框 | `requestConfirm()` 返回 Promise，全局 NModal；危险态标红、默认焦点「取消」、Esc 关闭、移动端 ≥44px | utils/confirm-dialog.js、components/ui/ConfirmDialog.vue、AppShell.vue |
+| 三处 window.confirm 替换 | 断开设备、抢占控制权、吊销分享链接 | DevicesPanel.vue、DeviceControlLeaseButton.vue、settings/SettingsShareSection.vue |
+| main.css 拆分 | 3380 行 → 16 个模块（base/shell-sidebar/layout/devices/workspace/workspace-actions/cast-viewport/workspace-controls/modals-auth/responsive-900/device-files/device-apps/device-apps-detail/device-terminal/responsive/share）+ index.css 入口 | frontend/web/src/assets/*.css |
+| 触控目标 | `@media (max-width:900px), (pointer:coarse)` 下 44px；桌面端不变 | assets/touch-targets.css |
+| 组件拆分 | GroupControlPanel 738→232、AddDeviceModal 653→276 | components/group-control/*、components/add-device/* |
+
+### 16.2 实测记录
+
+- 等价性：16 个分片按 index.css 顺序拼接、与拆分前 main.css `diff` 为空（两侧各 3380 行）；临时去掉 touch-targets 重新构建后 dist CSS 与拆分前逐字节一致（125103 B）；
+- 体量：CSS 125103 → 126080 B（+0.78%）；
+- 响应式：1440/768/390 三档 `documentElement.scrollWidth === innerWidth`；
+- 触控：390/768 下 primary/ghost/sidebar tab/工作区动作/文件动作/底部导航均 44px，1440 下仍为 38/32/24.2（`(pointer:coarse)=false`，无泄漏）；
+- 审计 actor：`appendStoredLog` 落库实测 admin / viewer:团队A / 缺省 local / 200 字符截断到 64；
+- 确认框（真实构建 + 真后端）：设置→分享→生成链接→吊销时弹出「请确认 / 吊销后「验收测试」立即失效，确定吊销？/ 取消 / 吊销」，默认焦点在取消；取消后列表仍有该项；Esc 可关闭；确认后列表回到「还没有生成过分享链接」；截图 /tmp/t432-confirm.png。
+
+### 16.3 仍未做
+
+1. `AddDeviceApplePanel.vue` 383 行、`useDeviceScrcpyCast.js` 868 行、`windows-desktop.css` 1094 行、`add-device-modal.css` 997 行仍是超 300 行文件；
+2. 触控规则对 `pointer: coarse` 的桌面触屏设备同样生效（任务单允许的二选一方案）；
+3. 日志身份暂只有 admin/viewer 两档，接多用户前没有第三类角色。

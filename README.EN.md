@@ -269,6 +269,13 @@ Images are embedded in the corresponding feature sections below.
 - A saved H.265/AV1 choice is **auto-fallen back** to a decodable encoder with a one-off warning; if the device only offers undecodable codecs you get an explicit heads-up
 - Use scrcpy / escrcpy desktop if you need H.265/AV1 — this project's cast stack stays H.264-only
 
+### Audit and interaction (1.27.0)
+
+- Logs now record **who did it**: "Admin" for administrators, "Read-only share (label)" for share visitors — the identity is decided server-side and cannot be spoofed by the client
+- Disconnecting a device, taking over control and revoking share links now use an in-app confirm dialog: danger actions are red, focus starts on Cancel, Esc closes it
+- Touch targets on mobile are a consistent 44px (the smallest used to be 21.6px)
+- Stylesheets and two oversized components were split into modules so future changes no longer mean scrolling through 3000-line files
+
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ---
