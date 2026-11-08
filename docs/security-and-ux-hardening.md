@@ -425,3 +425,41 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 4. **镜像构建验证**：本机 apt 限速导致整镜像未构建；`docker build --check`、compose config 与权限探针已通过。
 5. **Android 编译验证**：本机无 SDK，仅做 XML 解析校验。
 6. H.265 假支持、超 300 行文件拆分、触控目标 ≥44px，仍是 backlog。
+
+## 13. v1.25.0 进展（设备控制权租约）
+
+### 13.1 为什么做这个
+
+审计里与 STF 差距最大的一项，不是功能多少，而是「谁在操控」。
+
+- 多会话同看一台设备时，服务端把每一路控制帧都转给设备：A 的点击与 B 的滑动互相打架；
+- 日志里只有 serial 与事件，看不出是哪个会话操作的；
+- 没有「只读观察者」概念，任何人打开就等于拿到控制权。
+
+### 13.2 落地内容
+
+| 层 | 内容 | 位置 |
+|---|---|---|
+| 租约服务 | 内存 Map<serial, lease>；TTL 45s、心跳续期、15s 清扫；会话键 = sha256(token)[:12]；force 抢占记录 previousHolder | services/device-control-lease.js |
+| API | GET `/api/devices/:serial/control`、POST `.../control/{acquire,release,heartbeat}`；409 携带 holder 与 enforced | routes/device-control-routes.js |
+| 强制模式 | `CLOUD_PHONE_CONTROL_ENFORCE=1`（strict）才拒绝；默认 advisory 不改变单用户行为 | services/device-control-lease.js |
+| 接线 | 投屏控制帧丢弃 + `control-denied`（RESET_VIDEO 与视频帧放行）、终端 `close 4403`、安装/冻结/卸载/上传/停止应用执行前 409 | services/control-guard.js |
+| 前端 | 进工作区自动取租约、20s 心跳、离开/heacon 释放；卡片角标、工具栏四态按钮、二次确认抢占、只读置灰 | composables/useDeviceControl.js、DeviceControlLeaseButton.vue |
+
+### 13.3 实测记录
+
+- 心跳：同一租约三次 GET 的 `expiresAt` 各 +20s，`acquiredAt` 不变，超过 TTL 仍持有；
+- 冲突：第二会话 acquire 返回 `409 control_lease_held` 且带 holder（label 为「设备名 · 浏览器」）；
+- 抢占：二次确认后切换成功，原会话立刻变只读（`mine:false`，holder.label 变为新持有者）；
+- 释放：返回列表与整页 reload（sendBeacon）后均 `held:false`；
+- strict 后端：非持有者上传/安装/卸载/停止应用/终端全部被拒，持有者照常落到 adb 层；
+- 投屏帧闸门：strict 非持有者的 touch/key 帧 0 到达监听器、2s 内只回一次 `control-denied`，视频帧与 RESET_VIDEO 放行；
+- 修掉的缺陷：`ws.close(4403, 中文)` 超过 123 字节 reason 上限抛 `RangeError`，异常被吞后连接停在打开态 —— 已按 UTF-8 码点裁剪 + `terminate` 兜底。
+
+### 13.4 已知边界
+
+1. harmony / iOS 投屏走 JSON 文本控制帧，不在 scrcpy 控制类型表里，当前不拦。
+2. `CHANGE_STREAM_PARAMETERS` 对旁观者放行（否则拿不到画面），其中的 start_app extras 仍可间接启动应用。
+3. 画廊角标靠 20s 轮询（无列表接口），几十台规模需要后端补 `GET /api/devices/control`。
+4. `DeviceWorkspace.vue` 663 行（改前 609），拆分属 v1.26 欠账。
+5. 抢占仍用 `window.confirm`，与仓库既有「断开设备」一致，未换页内确认。

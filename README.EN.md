@@ -249,6 +249,13 @@ Images are embedded in the corresponding feature sections below.
 - **Android**: backups disabled (`allowBackup=false` plus exclude-all rules) and only system CAs are trusted; cleartext stays enabled with the reason documented (both client and backend are http today)
 - **Docker**: images run as uid 10001, compose adds `no-new-privileges` and `cap_drop: ALL`, and a new `.dockerignore` keeps `.env` out of the image
 
+### Device control lease (1.25.0)
+
+- One control lease per device: 45s TTL with a 20s heartbeat, released automatically if a browser dies
+- Device cards show "controlling" or "read-only", and the workspace toolbar lets you take, release or take over control (takeover asks for confirmation)
+- Read-only sessions see navigation, volume and rotation greyed out, while screenshots, file browsing and the terminal keep working
+- Advisory by default (warn only); set `CLOUD_PHONE_CONTROL_ENFORCE=1` to have the server reject write operations from non-holders
+
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ---
