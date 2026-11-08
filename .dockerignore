@@ -1,0 +1,35 @@
+# 构建上下文是仓库根目录（见 docker-compose.build.yml 的 context: ..），
+# 不排除这些文件会把 .env（含密钥）、设备数据、node_modules 与 1.8G 参考仓库一起打进镜像：
+# 镜像体积暴涨、构建变慢，更严重的是 .env 泄露。
+.env
+.env.*
+!.env.example
+
+.git
+.github
+.gitignore
+.dockerignore
+
+node_modules
+**/node_modules
+dist
+**/dist
+frontend/web/.tls
+
+docker-cloud-phone/data
+**/*.log
+**/.DS_Store
+
+# 参考实现与文档不参与构建
+projects/
+docs/
+tasks/
+tools/.tmp
+*.md
+!README.md
+
+# Android 构建产物与本地配置
+frontend/android/.gradle
+frontend/android/build
+frontend/android/app/build
+frontend/android/local.properties
