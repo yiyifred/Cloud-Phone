@@ -24,8 +24,58 @@ export async function getDevicePathKind(serial, devicePath) {
 }
 
 /**
+ * Upload body budget for the streaming path.
+ *
+ * Kept next to the transfer code (not in utils/http.js) because that module's
+ * route pattern decides the *pre-flight* Content-Length rejection; this limit
+ * guards the byte counter while the body is being streamed to disk.
+ */
+export const DEFAULT_FILE_UPLOAD_MAX_BYTES = 256 * 1024 * 1024;
+
+export function resolveFileUploadMaxBytes() {
+  const configured = Number(process.env.UPLOAD_MAX_BYTES);
+
+  if (Number.isFinite(configured) && configured > 0) {
+    return configured;
+  }
+
+  return DEFAULT_FILE_UPLOAD_MAX_BYTES;
+}
+
+/** Temp dirs must not survive the request; a failed rm is reported, never hidden. */
+async function removeTempDir(dirPath) {
+  try {
+    await fs.rm(dirPath, { recursive: true, force: true, maxRetries: 3 });
+  } catch (error) {
+    console.warn("[files] 临时目录清理失败：", dirPath, error?.message ?? error);
+  }
+}
+
+/**
+ * Reserve a temp file for a streaming upload.
+ *
+ * @returns {Promise<{ localPath: string, cleanup: () => Promise<void> }>}
+ */
+export async function createUploadTempFile() {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cloud-phone-upload-"));
+
+  return {
+    localPath: path.join(tmpDir, "blob"),
+    cleanup: () => removeTempDir(tmpDir),
+  };
+}
+
+/**
+ * Pull a device file to a temp file and hand the caller its path.
+ *
+ * The bytes never enter the Node heap: the route pipes `localPath` to the
+ * response and calls `cleanup()` on both the success and the failure path.
+ * `size` comes from the pulled file itself so `Content-Length` cannot disagree
+ * with what will be streamed.
+ *
  * @param {string} serial
  * @param {string} devicePath absolute file path on device
+ * @returns {Promise<{ localPath: string, filename: string, devicePath: string, size: number, cleanup: () => Promise<void> }>}
  */
 export async function pullDeviceFile(serial, devicePath) {
   const remotePath = resolveDevicePath(devicePath);
@@ -43,20 +93,30 @@ export async function pullDeviceFile(serial, devicePath) {
     throw err;
   }
 
-  return runWithAdbLock(async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cloud-phone-pull-"));
-    const localPath = path.join(tmpDir, "blob");
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "cloud-phone-pull-"));
+  const localPath = path.join(tmpDir, "blob");
 
-    try {
-      await runAdb(["-s", serial, "pull", remotePath, localPath], { timeout: 600_000 });
-      const buffer = await fs.readFile(localPath);
-      const filename = path.posix.basename(remotePath) || "download";
+  try {
+    await runWithAdbLock(
+      () => runAdb(["-s", serial, "pull", remotePath, localPath], { timeout: 600_000 }),
+      { lockKey: serial },
+    );
 
-      return { buffer, filename, devicePath: remotePath };
-    } finally {
-      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-    }
-  }, { lockKey: serial });
+    const stat = await fs.stat(localPath);
+    const filename = path.posix.basename(remotePath) || "download";
+
+    return {
+      localPath,
+      filename,
+      devicePath: remotePath,
+      size: stat.size,
+      cleanup: () => removeTempDir(tmpDir),
+    };
+  } catch (error) {
+    // Nothing streams after a failed pull, so the temp dir is ours to drop now.
+    await removeTempDir(tmpDir);
+    throw error;
+  }
 }
 
 /**
