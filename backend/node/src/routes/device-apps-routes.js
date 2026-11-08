@@ -16,6 +16,7 @@ import {
   uninstallPackage,
 } from "../services/device-apps-mutate.js";
 import { runWithAdbLock } from "../services/adb-lock.js";
+import { denyWriteIfNotController } from "../services/control-guard.js";
 import {
   readProtectedBinaryBody,
   readProtectedJsonBody,
@@ -60,6 +61,8 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
 
   if (method === "PUT" && installMatch) {
     const serial = decodeURIComponent(installMatch[1]);
+    // 安装会改设备状态：strict 下非持有者 409；advisory 下不拦，行为与既有完全一致
+    if (denyWriteIfNotController(req, res, serial, "app_install")) return true;
     const tmpPath = createInstallTempPath();
 
     try {
@@ -158,6 +161,9 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
   if (method === "POST" && stateMatch) {
     const serial = decodeURIComponent(stateMatch[1]);
     const packageName = decodeURIComponent(stateMatch[2]);
+
+    // 冻结/解冻会改设备状态，与安装同属写类操作
+    if (denyWriteIfNotController(req, res, serial, "app_freeze")) return true;
 
     try {
       const body = await readProtectedJsonBody(req, res);
@@ -262,6 +268,9 @@ export async function handleDeviceAppsRoute(req, res, method, pathname, url) {
       });
       return true;
     }
+
+    // 先确认（客户端错误 400）再判控制权，避免把「忘了带 confirm」误报成 409
+    if (denyWriteIfNotController(req, res, serial, "app_uninstall")) return true;
 
     try {
       const result = await uninstallPackage(serial, packageName);

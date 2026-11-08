@@ -1,4 +1,5 @@
 import { logCastError, logCastInfo, logCastWarn } from "../services/scrcpy-cast/cast-logger.js";
+import { sessionKeyOf } from "../services/device-control-lease.js";
 import {
   attachWebSocketClient,
   ensureCastVideoPipe,
@@ -32,12 +33,14 @@ export function parseCastWebSocketPath(pathname) {
 /**
  * @param {import("ws").WebSocket} ws
  * @param {string} serial
- * @param {{ earlyClientMessages?: unknown[], detachEarlyMessage?: () => void, sessionKey?: string }} [early]
+ * @param {{ earlyClientMessages?: unknown[], detachEarlyMessage?: () => void, sessionKey?: string, sessionToken?: string|null }} [early]
  */
 export async function handleCastWebSocket(ws, serial, early = {}) {
   const earlyClientMessages = early.earlyClientMessages ?? [];
   const detachEarlyMessage = early.detachEarlyMessage ?? (() => {});
   const sessionKey = early.sessionKey || serial;
+  // 只记哈希引用，不落原始 sessionToken；控制帧拦截本身在 ws 上层的 control-guard 完成
+  const controlSessionKey = sessionKeyOf(early.sessionToken);
 
   const releaseEarly = () => {
     try {
@@ -91,6 +94,7 @@ export async function handleCastWebSocket(ws, serial, early = {}) {
     try {
       logCastInfo(serial, "ws.session.begin", {
         sessionKey,
+        controlSessionKey,
         webCast: Boolean(session.webCast),
         localPort: session.localPort,
         deviceWsPort: session.deviceWsPort ?? null,
