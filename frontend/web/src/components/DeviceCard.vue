@@ -20,6 +20,11 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  /** 控制权快照（T-422），来自 useControlLeaseRegistry；null 表示不显示角标。 */
+  control: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["open", "contextmenu"]);
@@ -61,6 +66,32 @@ const stateLabel = computed(() => getDeviceStateLabel(props.device.state));
 const screenshotAlt = computed(() =>
   t("devices.screenshotAlt", { name: props.device.displayName }),
 );
+
+// 角标只说结论（控制中 / 只读），持有者名字放 title：卡片高度寸土寸金，
+// 长设备名会把右上角两枚胶囊挤到互相遮挡。
+const controlBadge = computed(() => {
+  const control = props.control;
+
+  if (!control?.held) {
+    return null;
+  }
+
+  if (control.mine) {
+    return {
+      text: t("devices.control.badgeMine"),
+      tone: "mine",
+      title: t("devices.control.badgeMineTitle"),
+    };
+  }
+
+  const name = control.holder?.label || t("devices.control.anonymousHolder");
+
+  return {
+    text: t("devices.control.badgeReadonly"),
+    tone: "other",
+    title: t("devices.control.badgeReadonlyTitle", { name }),
+  };
+});
 
 function revokeScreenshotObjectUrl() {
   if (screenshotObjectUrl) {
@@ -202,6 +233,14 @@ watch(isInView, (visible) => {
         :class="device.connected ? 'device-card__status--online' : 'device-card__status--offline'"
       >
         {{ stateLabel }}
+      </span>
+      <span
+        v-if="controlBadge"
+        class="device-card__control"
+        :class="`device-card__control--${controlBadge.tone}`"
+        :title="controlBadge.title"
+      >
+        {{ controlBadge.text }}
       </span>
     </div>
 

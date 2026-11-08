@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.25.0 - 2026-11-08
+
+**设备控制权租约（新）**
+
+- **租约服务**：每台设备一个内存态租约，TTL 45 秒、20 秒心跳续期、15 秒清扫；会话身份用 `sha256(token)` 前 12 位，令牌不落日志；支持抢占并记录 `previousHolder`（`services/device-control-lease.js`）
+- **接口**：`GET /api/devices/:serial/control`、`POST .../control/{acquire,release,heartbeat}`；冲突返回 409 + holder + enforced（`routes/device-control-routes.js`）
+- **强制模式**：`CLOUD_PHONE_CONTROL_ENFORCE=1` 才拒绝写操作，默认 advisory 完全不影响单用户流程
+- **接线**：投屏控制帧（丢弃并回 `control-denied`，RESET_VIDEO/视频帧放行）、ADB 终端（`close 4403`）、安装/冻结/卸载/上传/停止应用在收流或执行前 409（`services/control-guard.js`）
+- **前端**：进入工作区自动取得租约、20 秒心跳、离开释放；设备卡「控制中/只读」角标；工具栏控制权按钮四态 + 二次确认抢占；只读时导航/音量/旋转置灰，截屏与文件不受影响
+- **修复**：`ws.close(4403, 长中文)` 超过 123 字节 reason 上限会抛 `RangeError` 并让连接留在打开态，已按 UTF-8 码点裁剪并 `terminate` 兜底
+
+**其它**
+
+- 五语 `devices.control.*` 15 键补齐（各 341 键，键集合一致）
+- 任务单 `tasks/T-420`～`T-422`
+
 ## 1.24.0 - 2026-11-08
 
 **性能与传输**
@@ -804,35 +820,3 @@
 ## 0.9.6 - 2026-05-27
 
 - 新增 `scripts/` 三平台自动安装向导（Linux / macOS / Windows），命令行伪图形菜单
-- Linux 支持 Debian/Ubuntu、Alpine、Fedora/RHEL、Arch、openSUSE、Void 等；可选 Node、npm 依赖、JDK、Android SDK、Meson、编译魔改 scrcpy-server
-- Windows 安装脚本兼容 PowerShell 5.1（winget/choco）；界面使用 ASCII 避免控制台乱码
-- `scripts/install.sh` Unix 入口；`scripts/lib/` 共享 TUI 与发行版探测；`.gitattributes` 保证 shell 脚本 LF
-
-### Cross-platform install scripts
-- Interactive terminal installers under `scripts/` for Linux, macOS, and Windows
-- Linux multi-distro package managers; optional modded scrcpy-server build
-- Windows PS 5.1-safe installer with ASCII UI
-
-## 0.9.5 - 2026-05-27
-
-- 完善 Linux / macOS 魔改 scrcpy 构建：`--all-platforms` 一次安装三平台 `scrcpy-server`；Meson 使用魔改 `-Dprebuilt_server`，不再走官方 `install_release.sh`
-- 新增 `tools/scrcpy-platform.js`、`scrcpy-build-env.js`、`build-scrcpy-client.mjs`；跨平台 JDK/Android SDK 探测
-- `npm run build:scrcpy-server` / `build:scrcpy-server:all` / `build:scrcpy`；官方下载路径增加无魔改警告；支持 linux aarch64 预编译包名
-
-### Linux / macOS modded scrcpy build
-- `--all-platforms` installs modded server JAR under windows/linux/macos bin dirs
-- Client build embeds modded server via Meson; no `install_release.sh` / official unmodded server
-- Shared platform/env helpers; npm build scripts; warn on official server download
-
-## 0.9.4 - 2026-05-27
-
-- 同步 `backend/node/package-lock.json` 至 v0.9.4
-- 设备文件管理支持上传与下载：顶栏上传到当前目录，文件行下载到电脑（`adb push` / `adb pull`）
-- 新增 API：`PUT .../files/upload?path=`、`GET .../files/download?path=`
-- 上传/下载图标改为 Lucide `file-up` / `file-down` 风格
-
-### Device file upload & download
-- File explorer: upload to current directory, per-file download via new REST endpoints
-- Lucide-style file-up / file-down toolbar icons
-
-## 0.9.3 - 2026-05-27

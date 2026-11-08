@@ -31,9 +31,15 @@ export function isAllowedWsOrigin(request) {
   }
 }
 
+/**
+ * 返回 session 对象而不是布尔值：控制权租约需要 sessionToken 才能判断「这条连接是谁」。
+ * 既有调用点的 `if (!session)` 判空语义不变（无会话仍返回 null）。
+ *
+ * @returns {Promise<{token: string, encryptionKey: Buffer, expiresAt: number} | null>}
+ */
 export async function verifyWebSocketSession(request) {
   const cookies = parseCookies(request.headers.cookie);
   const session = await requireApiSession(getSessionTokenFromCookies(cookies));
 
-  return Boolean(session);
+  return session ?? null;
 }

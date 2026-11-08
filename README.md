@@ -243,6 +243,13 @@ images/readme/
 - **Android**：关闭备份（`allowBackup=false` + 全量排除规则），只信任系统证书；明文保留但说明了原因（客户端与后端目前都只有 http）
 - **Docker**：镜像以 uid 10001 非 root 运行，compose 加 `no-new-privileges` 与 `cap_drop: ALL`，新增 `.dockerignore` 避免把 `.env` 打进镜像
 
+### 设备控制权（1.25.0）
+
+- 每台设备一个控制权租约：45 秒 TTL + 20 秒心跳，浏览器崩掉后自动释放
+- 设备卡显示「控制中 / 只读」，工作区工具栏可取得、释放或抢占控制权（抢占需二次确认）
+- 只读会话的导航、音量、旋转等按键置灰，截屏、文件浏览与终端不受影响
+- 默认 advisory 模式（只提示不拦），设 `CLOUD_PHONE_CONTROL_ENFORCE=1` 后服务端才拒绝非持有者的写操作
+
 更细的版本记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---

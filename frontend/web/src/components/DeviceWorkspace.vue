@@ -1,9 +1,11 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
 import AppIcon from "./AppIcon.vue";
 import DeviceAppManager from "./DeviceAppManager.vue";
 import DeviceCastViewport from "./DeviceCastViewport.vue";
+import DeviceControlLeaseButton from "./DeviceControlLeaseButton.vue";
 import DeviceFileExplorer from "./DeviceFileExplorer.vue";
 import DeviceTerminal from "./DeviceTerminal.vue";
 import DeviceWorkspaceToolbar from "./DeviceWorkspaceToolbar.vue";
@@ -40,6 +42,7 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const feedback = useAppFeedback();
+const { t } = useI18n();
 
 const isCasting = ref(false);
 const castBusy = ref(false);
@@ -132,6 +135,49 @@ watch(castHint, (message) => {
 
   feedback.error(message);
 });
+
+// 控制权租约（T-422）放在 DeviceControlLeaseButton 里自治：这里只接收「是否只读」
+// 与持有者名字，用于把向设备发控制消息的按键置灰并给出 title。
+const controlReadonly = ref(false);
+const controlHolderName = ref("");
+
+// 只读时置灰的是「真的往设备发控制消息」的那几个键：导航/音量/旋转。
+// 截屏、录屏、文件、应用、终端仍可用——看画面和翻文件不该被别人的租约挡住。
+const CONTROL_MESSAGE_ACTION_IDS = new Set([
+  "recents",
+  "home",
+  "back",
+  "screen-off",
+  "power",
+  "rotate",
+  "volume",
+]);
+
+function handleControlReadonlyChange(value) {
+  controlReadonly.value = Boolean(value);
+}
+
+function handleControlHolderChange(value) {
+  controlHolderName.value = String(value ?? "");
+}
+
+function toolbarActionDisabled(action) {
+  if (controlReadonly.value && CONTROL_MESSAGE_ACTION_IDS.has(action.id)) {
+    return true;
+  }
+
+  return isActionDisabled(action);
+}
+
+function toolbarActionTitle(action) {
+  if (controlReadonly.value && CONTROL_MESSAGE_ACTION_IDS.has(action.id)) {
+    return t("devices.control.readonlyHint", {
+      name: controlHolderName.value || t("devices.control.anonymousHolder"),
+    });
+  }
+
+  return actionTitle(action);
+}
 
 const stateLabel = computed(() => getDeviceStateLabel(props.device.state));
 const toolbarActions = computed(() => {
@@ -519,8 +565,8 @@ async function handleViewportFullscreenChange(isFullscreen) {
         :is-volume-menu-action="isVolumeMenuAction"
         :action-label="actionLabel"
         :action-icon="actionIcon"
-        :action-title="actionTitle"
-        :is-action-disabled="isActionDisabled"
+        :action-title="toolbarActionTitle"
+        :is-action-disabled="toolbarActionDisabled"
         :uses-press-hold="usesPressHold"
         :is-action-pressed="isActionPressed"
         :is-action-recording="isActionRecording"
@@ -530,7 +576,15 @@ async function handleViewportFullscreenChange(isFullscreen) {
         :handle-volume-sub-action="handleVolumeSubAction"
         :long-horizontal="screenLongHorizontal"
         :floating="isViewportFullscreen"
-      />
+      >
+        <template #lease>
+          <DeviceControlLeaseButton
+            :device="device"
+            @update:readonly="handleControlReadonlyChange"
+            @update:holder="handleControlHolderChange"
+          />
+        </template>
+      </DeviceWorkspaceToolbar>
     </header>
 
     <div

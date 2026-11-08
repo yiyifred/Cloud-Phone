@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { MonitorSmartphone } from "lucide-vue-next";
 
@@ -12,6 +12,7 @@ import PageHeader from "./ui/PageHeader.vue";
 import PanelAlert from "./ui/PanelAlert.vue";
 import SkeletonCard from "./ui/SkeletonCard.vue";
 import { useAppFeedback } from "../composables/useAppFeedback.js";
+import { POLL_INTERVAL_MS, useControlLeaseRegistry } from "../composables/useDeviceControl.js";
 import { getErrorMessage } from "../utils/api.js";
 import { disconnectWirelessDevice } from "../utils/devices-api.js";
 import { formatRefreshTime, summarizeDevices } from "../utils/device-format.js";
@@ -53,6 +54,32 @@ const contextMenu = ref(null);
 const actionFeedback = ref("");
 
 const summary = computed(() => summarizeDevices(props.devices));
+
+// 画廊角标要知道「谁在控制这台设备」。后端没有列表接口（只有按 serial 的单台 GET），
+// 所以这里按当前可见设备串行探测；20 秒一轮，比 45 秒 TTL 富余，又不会打出并发风暴。
+const { leases, refreshSerials } = useControlLeaseRegistry();
+let controlPollTimer = null;
+
+function pollControlLeases() {
+  void refreshSerials(props.devices.map((device) => device.serial));
+}
+
+onMounted(() => {
+  pollControlLeases();
+  controlPollTimer = window.setInterval(pollControlLeases, POLL_INTERVAL_MS);
+});
+
+onBeforeUnmount(() => {
+  if (controlPollTimer) {
+    window.clearInterval(controlPollTimer);
+    controlPollTimer = null;
+  }
+});
+
+watch(
+  () => props.devices.map((device) => device.serial).join(","),
+  () => pollControlLeases(),
+);
 const refreshLabel = computed(() => formatRefreshTime(props.lastRefreshedAt));
 const showEmptyState = computed(
   () => !props.devices.length && !props.loading && !props.error,
@@ -197,6 +224,7 @@ async function handleDisconnectDevice() {
           :key="device.serial"
           :device="device"
           :screenshot-url="screenshotUrl(device.serial)"
+          :control="leases[device.serial] ?? null"
           @open="emit('open-device', $event)"
           @contextmenu="openContextMenu"
         />

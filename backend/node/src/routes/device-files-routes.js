@@ -1,4 +1,5 @@
 import { APP_VERSION } from "../config/version.js";
+import { denyWriteIfNotController } from "../services/control-guard.js";
 import { DEVICE_FILES_DEFAULT_OPEN } from "../services/device-file-path.js";
 import { listDeviceFiles } from "../services/device-files.js";
 import {
@@ -162,6 +163,9 @@ export async function handleDeviceFilesRoute(req, res, method, pathname, url) {
       });
       return true;
     }
+
+    // 上传会写设备文件系统：strict 下非持有者 409，且在收流前拦下，避免白收一整个包体
+    if (denyWriteIfNotController(req, res, serial, "file_upload")) return true;
 
     try {
       temp = await createUploadTempFile();

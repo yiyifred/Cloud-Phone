@@ -89,6 +89,8 @@ defineProps({
       role="toolbar"
       aria-label="设备控制"
     >
+      <!-- 控制权按钮插槽排在最前：它决定后面这些按键能不能按，先看到状态再动手 -->
+      <slot name="lease" />
       <template v-for="action in actions" :key="action.id">
         <div
           v-if="isVolumeMenuAction(action)"

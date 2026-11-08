@@ -10,6 +10,12 @@ import {
   parseTerminalWebSocketPath,
 } from "../routes/device-terminal-routes.js";
 import { isAllowedWsOrigin, verifyWebSocketSession } from "../middleware/ws-auth.js";
+import {
+  CONTROL_DENIED_CLOSE_CODE,
+  clampCloseReason,
+  describeTerminalDenial,
+  installCastControlFrameGate,
+} from "../services/control-guard.js";
 import { logCastInfo, logCastWarn } from "../services/scrcpy-cast/cast-logger.js";
 
 /** Terminal sockets spawn an adb shell each: a single session must not be able to fork-bomb the host. */
@@ -88,9 +94,9 @@ export function setupDeviceWebSocket(server) {
       return;
     }
 
-    const authorized = await verifyWebSocketSession(request);
+    const session = await verifyWebSocketSession(request);
 
-    if (!authorized) {
+    if (!session) {
       logCastWarn(serial, "ws.rejected", {
         reason: "unauthorized",
         path: requestUrl.pathname,
@@ -99,6 +105,9 @@ export function setupDeviceWebSocket(server) {
       socket.destroy();
       return;
     }
+
+    // 控制权租约要用「这条连接属于哪个会话」来判断，握手阶段已经拿到 cookie 里的 token
+    const sessionToken = session.token ?? null;
 
     const release = terminalRoute ? acquireTerminalSlot(serial) : acquireCastSlot();
 
@@ -117,9 +126,32 @@ export function setupDeviceWebSocket(server) {
       ws.once("close", release);
 
       if (terminalRoute) {
+        // strict 下非持有者不许开 shell：升级后立刻带原因关闭，避免先起 adb shell 再断
+        const denial = describeTerminalDenial(terminalRoute.serial, sessionToken);
+
+        if (denial) {
+          logCastWarn(serial, "ws.terminal.denied", {
+            code: denial.code,
+            holder: denial.holder?.reference ?? null,
+          });
+
+          try {
+            // reason 必须 ≤123 字节，否则 ws 抛 RangeError 且连接留在打开状态
+            ws.close(CONTROL_DENIED_CLOSE_CODE, clampCloseReason(denial.message));
+          } catch (error) {
+            console.warn("[ws] 终端拒绝关闭失败，改用强制终止：", error?.message ?? error);
+            ws.terminate();
+          }
+
+          return;
+        }
+
         handleDeviceTerminalWebSocket(ws, terminalRoute.serial);
         return;
       }
+
+      // 控制帧闸门必须在任何 message 监听器之前装好（advisory 下不打补丁）
+      installCastControlFrameGate(ws, { serial: castRoute.serial, sessionToken });
 
       if (castRoute.channel === "control") {
         void handleCastControlWebSocket(ws, castRoute.serial);
@@ -138,6 +170,7 @@ export function setupDeviceWebSocket(server) {
         earlyClientMessages,
         detachEarlyMessage: () => ws.off("message", onEarlyMessage),
         sessionKey: requestUrl.searchParams.get("sessionKey") || castRoute.serial,
+        sessionToken,
       });
     });
   });

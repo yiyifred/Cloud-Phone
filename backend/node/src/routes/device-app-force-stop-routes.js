@@ -1,4 +1,5 @@
 import { APP_VERSION } from "../config/version.js";
+import { denyWriteIfNotController } from "../services/control-guard.js";
 import { forceStopPackage } from "../services/device-apps-mutate.js";
 import { stopPackage } from "../services/device-apps-stop.js";
 import { sendProtectedJson } from "../utils/protected-http.js";
@@ -18,6 +19,11 @@ export async function handleDeviceAppStopRoute(req, res, method, pathname) {
 
   const serial = decodeURIComponent(match[1]);
   const packageName = decodeURIComponent(match[2]);
+
+  // 停止应用同样是「抢设备」的操作：strict 模式下非控制者不得把别人正在操作的应用停掉
+  if (denyWriteIfNotController(req, res, serial, "app_stop")) {
+    return true;
+  }
 
   try {
     const result = await stopPackage(serial, packageName);
@@ -58,6 +64,10 @@ export async function handleDeviceAppForceStopRoute(req, res, method, pathname) 
 
   const serial = decodeURIComponent(match[1]);
   const packageName = decodeURIComponent(match[2]);
+
+  if (denyWriteIfNotController(req, res, serial, "app_force_stop")) {
+    return true;
+  }
 
   try {
     const result = await forceStopPackage(serial, packageName);
