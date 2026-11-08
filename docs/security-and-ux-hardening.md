@@ -396,8 +396,32 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 ### 11.3 未完成与观察项
 
 1. 可视化回归未做：只做构建级与算术级验证，未逐页截图比对；提交前建议用 1440/1024/768/375 四档过一遍。
-2. 静态托管下 SPA 白屏（既有问题，非本批引入）：用 server.mjs 托管 dist 时页面只渲染到 n-config-provider，Vue 未抛异常；同一份 dist 用 python http.server 托管可正常渲染登录页。已用 HEAD 版 AppShell 对照复现，说明与本批改动无关；下一步在 npm run dev 与 https 路径上二分定位。
+2. ~~静态托管下 SPA 白屏~~ **已定位并修复（v1.23.0 内）**：真因是 T-405 新增的 CSP 拦掉了 vue-i18n 非 JIT 分支的 `new Function`，不是既有缺陷。修法是在 vite 顶层 `define` 打开 `__INTLIFY_JIT_COMPILATION__`（JIT 用 AST 组装渲染函数、不 eval），CSP 保持无 `'unsafe-eval'`。
 3. H.265 假支持仍在（前端只构造 avc1.* 解码配置），属 v1.24。
 4. main.css 3027 行、GroupControlPanel.vue 738 行等超 300 行红线，属历史遗留，与视觉回归同批拆分。
 5. 触控目标 ≥44px、工作区工具栏 5+更多、i18n 补齐 56 键、审计 actor 贯通，均在 v1.24。
-6. 提交前需按 AGENTS 完成：tools/version_manager.py 升到 v1.23.0、CHANGELOG.md 条目、README.md 与 README.EN.md 双语说明。
+6. ~~提交前需按 AGENTS 完成版本/CHANGELOG/README~~ **已完成**：v1.23.0 与 v1.24.0 均通过 tools/version_manager.py 升版，CHANGELOG 与中英 README 同步，任务单 T-400～T-416 入库。
+
+## 12. v1.24.0 进展（文件流式化 / 平台加固 / 视觉收敛）
+
+### 12.1 落地内容
+
+| 项 | 结果 | 关键位置 |
+|---|---|---|
+| S-10 文件传输 | 下载 createReadStream 分块、上传 pipeline 流式落盘；100 MiB 下载在 `--max-old-space-size=256` 下峰值 1.10× 文件大小，五类失败路径 /tmp 零残留 | services/device-files-transfer.js、utils/protected-http.js、routes/device-files-routes.js |
+| S-10b 上限修正 | `UPLOAD_PATH_PATTERN` 补 `/files/upload`（原默认 1 MiB 会误拦 5 MiB 上传）；实测 resolveBodyLimit 返回 268435456 | utils/http.js |
+| S-10c 错误语义 | parent_missing 404、parent_not_dir/path_required/upload_empty_body 400、超限 413，其余 500 | routes/device-files-routes.js |
+| S-13 Android | `allowBackup=false` + 备份规则全量排除；NSC 只信任 system CA（debug 变体放开 user CA）；明文保留并写明理由（客户端 5 处硬编码 http、后端只有 http） | AndroidManifest.xml、res/xml/*、src/debug/res/xml/network_security_config.xml |
+| S-14 Docker | 镜像 uid 10001 非 root；`CLOUD_PHONE_DATA_DIR=/data` 卷；compose 与 build 变体均加 `no-new-privileges` + `cap_drop: ALL`；新增根 `.dockerignore`（不再把 .env 与 1.8G 参考仓库打进镜像） | docker/backend.Dockerfile、frontend.Dockerfile、docker-compose*.yml、.dockerignore |
+| 字体自托管 | 去 Google Fonts 外链改系统栈；CSP 收窄 `style-src`/`font-src`；实测 `document.fonts` 为空、外部请求 0 | index.html、main.css、server.mjs |
+| i18n 完整性 | ja/ko/zh-TW 各补 35 键、en 补 1 键，五语均 326 键且集合一致，运行时 0 条 `Not found` | i18n/messages/*/devices.js |
+| 视觉收敛 | 主按钮单一来源（token 高度/圆角/字号/过渡/焦点环）；ghost 按钮对齐 pill；离线卡片 16/10；ADB 状态中文化 | main.css、components/DeviceCard.vue |
+
+### 12.2 仍未完成（v1.25 候选）
+
+1. **控制权租约与多用户角色**：仍未做，是与 STF 差距最大的一项（谁在操控、只读观察者、抢占提示）。
+2. **Android release 的 https**：客户端与后端都只有 http，当前靠「只信任系统 CA」缓解中间人；后端上 TLS 后才能把 NSC 的 cleartext 关掉。
+3. **宿主目录属主**：Docker 数据目录需一次性 `chown -R 10001:10001 docker-cloud-phone/data`，未做自动迁移。
+4. **镜像构建验证**：本机 apt 限速导致整镜像未构建；`docker build --check`、compose config 与权限探针已通过。
+5. **Android 编译验证**：本机无 SDK，仅做 XML 解析校验。
+6. H.265 假支持、超 300 行文件拆分、触控目标 ≥44px，仍是 backlog。

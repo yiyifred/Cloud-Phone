@@ -197,7 +197,7 @@ images/readme/
 - 根目录 `/`，默认打开 `/storage/emulated/0`；地址栏显示真实绝对路径
 - 后退 / 前进 / 向上 / 刷新；无权限时提示「权限不足」
 - **上传**：将本地文件推到当前目录（`PUT .../files/upload?path=`）
-- **下载**：将设备上的文件保存到电脑（`GET .../files/download?path=`）
+- **下载**：将设备上的文件保存到电脑（`POST .../files/download?path=`，二进制流式响应）
 - `GET /api/devices/:serial/files?path=...` 列出目录
 
 ### 应用管理
@@ -233,6 +233,15 @@ images/readme/
 - **数据与日志**：数据目录 `0700`、`auth.key` 与数据库 `0600`；操作日志新增 `actor` 列，`message` / `details` 超长自动截断
 - **设备应用**：`packageName` 在进入 `adb shell` 前按白名单正则校验，非法直接 `400`；安装临时包随机名 + `0600`
 - **前端交付**：统一注入 CSP / XFO / nosniff / Referrer-Policy / Permissions-Policy 响应头；自签证书落盘复用（`.tls/`，`0700`/`0600`）
+
+### 安全加固（1.24.0）
+
+- **文件传输流式化**：下载改为分块流式响应、上传改为流式落盘后再 `adb push`；100 MiB 下载内存峰值 1.10× 文件大小，失败路径不留临时文件
+- **上传上限修正**：`/files/upload` 不再被 1 MiB 的 JSON 上限误拦；上传错误按 400/404/413 返回
+- **字体自托管**：去掉 Google Fonts 外链改系统字体栈，CSP 不再放行外部字体源
+- **多语言补齐**：日 / 韩 / 繁中键集合与简中完全一致（各 326 键），运行时无缺键警告
+- **Android**：关闭备份（`allowBackup=false` + 全量排除规则），只信任系统证书；明文保留但说明了原因（客户端与后端目前都只有 http）
+- **Docker**：镜像以 uid 10001 非 root 运行，compose 加 `no-new-privileges` 与 `cap_drop: ALL`，新增 `.dockerignore` 避免把 `.env` 打进镜像
 
 更细的版本记录见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -423,7 +432,7 @@ Cloud-Phone/
 | GET | `/api/devices/:serial/video-encoders` | 音视频编码器列表 |
 | GET | `/api/devices/:serial/cameras` | 摄像头列表 |
 | GET | `/api/devices/:serial/files?path=` | 目录列表 |
-| GET | `/api/devices/:serial/files/download?path=` | 下载文件 |
+| POST | `/api/devices/:serial/files/download?path=` | 下载文件（二进制流式） |
 | PUT | `/api/devices/:serial/files/upload?path=` | 上传到设备 |
 | GET/DELETE | `/api/devices/:serial/apps` | 应用列表 / 卸载 |
 | GET | `/api/devices/:serial/apps/:pkg` | 应用详情 |

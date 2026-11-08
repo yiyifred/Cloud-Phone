@@ -203,7 +203,7 @@ Images are embedded in the corresponding feature sections below.
 - Back / forward / up / refresh
 - “Permission denied” errors are surfaced clearly
 - **Upload** local files to the current directory (`PUT .../files/upload?path=`)
-- **Download** device files to the host (`GET .../files/download?path=`)
+- **Download** device files to the host (`POST .../files/download?path=`, streamed binary response)
 - `GET /api/devices/:serial/files?path=...` lists a directory
 
 ### Apps
@@ -239,6 +239,15 @@ Images are embedded in the corresponding feature sections below.
 - **Data & logs**: data directory `0700`, `auth.key` and the database `0600`; the activity log gains an `actor` column and truncates long `message` / `details`
 - **Device apps**: `packageName` is validated against an allowlist regex before reaching `adb shell` (`400` otherwise); install temp packages use random names and `0600`
 - **Frontend delivery**: CSP / XFO / nosniff / Referrer-Policy / Permissions-Policy are injected centrally; the self-signed certificate is persisted and reused (`.tls/`, `0700`/`0600`)
+
+### Security hardening (1.24.0)
+
+- **Streamed file transfer**: downloads stream in chunks and uploads stream to a temp file before `adb push`; a 100 MiB download peaks at 1.10x the file size and leaves no temp files behind on failure paths
+- **Upload limit fix**: `/files/upload` is no longer rejected by the 1 MiB JSON cap; upload errors now return 400/404/413
+- **Self-hosted fonts**: the Google Fonts link is gone in favour of a system font stack, and CSP no longer allowlists external font origins
+- **Complete locales**: Japanese / Korean / Traditional Chinese now match Simplified Chinese key-for-key (326 each) with no missing-key warnings at runtime
+- **Android**: backups disabled (`allowBackup=false` plus exclude-all rules) and only system CAs are trusted; cleartext stays enabled with the reason documented (both client and backend are http today)
+- **Docker**: images run as uid 10001, compose adds `no-new-privileges` and `cap_drop: ALL`, and a new `.dockerignore` keeps `.env` out of the image
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
@@ -425,7 +434,7 @@ Protected routes require a valid session cookie (sign in first). JSON bodies and
 | GET | `/api/devices/:serial/video-encoders` | Encoders |
 | GET | `/api/devices/:serial/cameras` | Cameras |
 | GET | `/api/devices/:serial/files?path=` | List files |
-| GET | `/api/devices/:serial/files/download?path=` | Download file |
+| POST | `/api/devices/:serial/files/download?path=` | Download file (streamed) |
 | PUT | `/api/devices/:serial/files/upload?path=` | Upload to device |
 | GET/DELETE | `/api/devices/:serial/apps` | Apps / uninstall |
 | GET | `/api/devices/:serial/apps/:pkg` | App detail |
