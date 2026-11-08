@@ -1,3 +1,5 @@
+import { getEncoderBlockReason } from "./webcodecs-support.js";
+
 /** Values that are codec ids, not MediaCodec encoder names. */
 const CODEC_LIKE_NAMES = new Set(["h264", "h265", "hevc", "av1", "opus", "aac", "flac"]);
 
@@ -125,4 +127,41 @@ export function ensureDefaultVideoEncoder(settings, encoders) {
   }
 
   applyVideoEncoderSelection(settings, options[0]);
+}
+
+/** 不可用编码器在下拉里的说明后缀。 */
+const UNSUPPORTED_ENCODER_SUFFIXES = {
+  player: "（网页端仅支持 H.264）",
+  browser: "（浏览器无法解码）",
+};
+
+/**
+ * 标记网页端解不了的编码器条目：播放器不实现（player）或浏览器 WebCodecs 不支持（browser）。
+ *
+ * @param {{ codec: string, value: string, label: string }[]} options
+ * @param {{ checked: boolean, supported: Set<string> } | null | undefined} support
+ */
+export function markUnsupportedEncoderOptions(options, support) {
+  return options.map((option) => {
+    const reason = getEncoderBlockReason(option.codec, support);
+
+    if (!reason) {
+      return option;
+    }
+
+    return {
+      ...option,
+      disabled: true,
+      unsupported: true,
+      unsupportedReason: reason,
+      label: `${option.label} ${UNSUPPORTED_ENCODER_SUFFIXES[reason]}`,
+    };
+  });
+}
+
+/**
+ * @param {{ disabled?: boolean }[]} options
+ */
+export function firstSelectableEncoderOption(options) {
+  return options.find((option) => !option.disabled) ?? null;
 }

@@ -13,11 +13,8 @@ import {
 } from "../../utils/camera-cast-defaults.js";
 import { MIRROR_AUDIO_SOURCES } from "../../utils/mirror-audio-constants.js";
 import { MIRROR_RESOLUTIONS } from "../../utils/mirror-cast-constants.js";
-import {
-  applyVideoEncoderSelection,
-  buildEncoderSelectOptions,
-  ensureDefaultVideoEncoder,
-} from "../../utils/mirror-encoder-utils.js";
+import { applyVideoEncoderSelection, formatCodecPrefix } from "../../utils/mirror-encoder-utils.js";
+import { useVideoEncoderOptions } from "../../composables/useVideoEncoderOptions.js";
 import MirrorCastAudioSection from "./MirrorCastAudioSection.vue";
 import MirrorSearchableSelect from "./MirrorSearchableSelect.vue";
 import MirrorSettingRow from "./MirrorSettingRow.vue";
@@ -103,18 +100,20 @@ const sizeOptions = computed(() => {
   ];
 });
 
-const encoderOptions = computed(() => buildEncoderSelectOptions(videoEncoders.value));
+const { options: encoderOptions } = useVideoEncoderOptions(
+  computed(() => videoEncoders.value),
+  () => ({ video: settings.camera }),
+  ({ from, to }) => {
+    feedback.warning(
+      to
+        ? `当前浏览器无法解码 ${formatCodecPrefix(from.codec)}，已回退 ${formatCodecPrefix(to.codec)}（${to.value}）。`
+        : `当前浏览器无法解码 ${formatCodecPrefix(from.codec)}，且设备未提供其它编码器，投屏会黑屏。`,
+    );
+  },
+);
 
 const cameraAudioSources = computed(() =>
   MIRROR_AUDIO_SOURCES.filter((item) => ["mic", "output", "playback"].includes(item.value)),
-);
-
-watch(
-  videoEncoders,
-  (encoders) => {
-    ensureDefaultVideoEncoder({ video: settings.camera }, encoders);
-  },
-  { immediate: true },
 );
 
 watch(

@@ -498,3 +498,33 @@ Android：frontend/android/app/src/main/AndroidManifest.xml:10-11
 2. viewer 的响应走 login-wire key（常量公开，属混淆）；机密性仍依赖 TLS 与只读授权。
 3. 分享令牌是内存态：进程重启即全部失效，这是有意的（避免遗留门禁卡）。
 4. 投屏被 viewer 开启时仍会向设备推送 scrcpy server；如需更严格，可加「可观看设备白名单」（未做）。
+
+## 15. v1.26.1 进展（H.265「假支持」收敛）
+
+### 15.1 根因（推翻"编码器列表多给了几项"的表层解释）
+
+- 后端与 UI 都允许 `video_codec` 取 h264/h265/av1（`services/scrcpy-cast/server-args.js:61`、`video-stream-config.js:68`、`cast-options.js:23`、`capabilities-data.js:33`），设备侧也确实产出对应码流；
+- 但网页播放器只做 H.264：`utils/h264-config.js:24` 的 `codecFromAvcC` 返回 `avc1.<profile>…`，`utils/ws-scrcpy-annexb-player.js:181` 只用这一份配置喂 `VideoDecoder`；
+- 于是 h265/av1 的码流进 `decode()` 必然报错/无帧 → 黑屏，用户看到的是"选了没反应"。
+
+### 15.2 落地内容
+
+| 项 | 结果 | 关键位置 |
+|---|---|---|
+| 能力探测 | `VideoDecoder.isConfigSupported` 探 avc1.42E01E / hvc1.1.6.L93.B0 / av01.0.05M.08，结果缓存、并发复用同一 Promise，异常按不支持处理 | utils/webcodecs-support.js（新，~120 行） |
+| 双层判定 | `PLAYER_DECODABLE_CODECS={h264}` 判"播放器不实现"，探针判"浏览器解不了"，两种原因分别提示 | utils/webcodecs-support.js `getEncoderBlockReason` |
+| 下拉置灰 | 不可用条目 `disabled` + 后缀「（网页端仅支持 H.264）」「（浏览器无法解码）」；帮助文案同步切换 | utils/mirror-encoder-utils.js `markUnsupportedEncoderOptions` |
+| 自动回退 | 历史设置/分享链接带来的 h265 选择，探测完成后回退到首个可用编码器并 warning 一次；设备只有不可解码编码器时提示"投屏会黑屏" | composables/useVideoEncoderOptions.js（新，~90 行） |
+| 覆盖范围 | 镜像投屏与摄像头投屏两个编码器选择器共用同一套闸门 | components/mirror/MirrorCastVideoSection.vue、MirrorCastSettings.vue、CameraCastSettings.vue |
+
+### 15.3 实测记录
+
+- 纯函数：`{supported:{h264}}` 下 h265/av1 → disabled（reason=player），h264 保持可选；`firstSelectableEncoderOption` 返回 h264，全不可用时返回 null；
+- 组合逻辑（Node 内驱动真实 Vue ref/watch）：初始 encoder=c2.android.hevc.encoder → 自动变为 OMX.google.h264.encoder、codec 从 h265 变 h264、warning 回调收到 h265→h264；
+- 本机 Chromium 探针：`hasVideoDecoder=true`、h264=true、h265=false、av1=true —— 说明"浏览器能解 AV1"但播放器不实现，只靠浏览器探测会漏掉 AV1，因此双层判定是必需的；
+- 构建：`npx vite build` 通过（4710 模块）。
+
+### 15.4 仍未做的部分
+
+- 真正的 H.265/AV1 解码（需要解析 hvcC/av1C 并从 SPS/VPS/PPS 构造配置），属投屏底座升级，与 scrcpy 4.1+ 的 `--video-codec` 能力对齐后再做；
+- 桌面端（scrcpy/escrcpy）不受此闸门影响，仍可用 H.265。

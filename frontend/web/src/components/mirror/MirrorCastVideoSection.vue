@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { NCollapseItem, NForm, NInput, NInputNumber, NSwitch } from "naive-ui";
 
 import { MIRROR_CAPTURE_ORIENTATIONS, MIRROR_RESOLUTIONS } from "../../utils/mirror-cast-constants.js";
-import { buildEncoderSelectOptions } from "../../utils/mirror-encoder-utils.js";
+import { useVideoEncoderOptions } from "../../composables/useVideoEncoderOptions.js";
 import MirrorSearchableSelect from "./MirrorSearchableSelect.vue";
 import MirrorSettingRow from "./MirrorSettingRow.vue";
 
@@ -26,7 +26,7 @@ const props = defineProps({
   },
 });
 
-const encoderOptions = computed(() => buildEncoderSelectOptions(props.videoEncoders));
+const { options: encoderOptions } = useVideoEncoderOptions(computed(() => props.videoEncoders));
 
 const resolutionOptions = computed(() =>
   MIRROR_RESOLUTIONS.map((item) => ({ label: item.label, value: item.value })),
@@ -53,6 +53,9 @@ const encoderHelp = computed(() => {
   }
   if (!encoderOptions.value.length) {
     return "未获取到编码器，请确认设备已连接并刷新页面。";
+  }
+  if (encoderOptions.value.some((item) => item.unsupported)) {
+    return "网页端目前只能解码 H.264，H.265/AV1 条目已置灰；需要这些编码请改用 scrcpy/escrcpy 桌面端。";
   }
   return "列表第一项为默认；网页投屏请优先选择 H.264 条目。";
 });

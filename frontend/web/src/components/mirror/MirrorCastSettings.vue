@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { NCollapse, NSpin, NText } from "naive-ui";
 
 import { useAppFeedback } from "../../composables/useAppFeedback.js";
@@ -11,11 +11,8 @@ import {
   ensureDefaultAudioCode,
 } from "../../utils/mirror-audio-utils.js";
 import { isAudioDupSupported } from "../../utils/mirror-audio-platform.js";
-import {
-  applyVideoEncoderSelection,
-  buildEncoderSelectOptions,
-  ensureDefaultVideoEncoder,
-} from "../../utils/mirror-encoder-utils.js";
+import { applyVideoEncoderSelection, formatCodecPrefix } from "../../utils/mirror-encoder-utils.js";
+import { useVideoEncoderOptions } from "../../composables/useVideoEncoderOptions.js";
 import MirrorCastAudioSection from "./MirrorCastAudioSection.vue";
 import MirrorCastDeviceSection from "./MirrorCastDeviceSection.vue";
 import MirrorCastScreenSection from "./MirrorCastScreenSection.vue";
@@ -76,20 +73,22 @@ watch(
   { immediate: true },
 );
 
-watch(
-  videoEncoders,
-  (encoders) => {
-    ensureDefaultVideoEncoder(settings, encoders);
+const { options: encoderOptions } = useVideoEncoderOptions(
+  computed(() => videoEncoders.value),
+  () => settings,
+  ({ from, to }) => {
+    feedback.warning(
+      to
+        ? `当前浏览器无法解码 ${formatCodecPrefix(from.codec)}，已自动回退 ${formatCodecPrefix(to.codec)}（${to.value}）。`
+        : `当前浏览器无法解码 ${formatCodecPrefix(from.codec)}，且设备未提供其它编码器，投屏会黑屏。`,
+    );
   },
-  { immediate: true },
 );
 
 watch(
   () => settings.video.encoder,
   (encoder) => {
-    const option = buildEncoderSelectOptions(videoEncoders.value).find(
-      (item) => item.value === encoder,
-    );
+    const option = encoderOptions.value.find((item) => item.value === encoder);
 
     if (option) {
       applyVideoEncoderSelection(settings, option);

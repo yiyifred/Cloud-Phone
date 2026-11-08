@@ -263,6 +263,12 @@ Images are embedded in the corresponding feature sections below.
 - Write requests from a viewer return `403 viewer_forbidden`; on the WebSocket side control frames are dropped with `control-denied`
 - No need to hand out the admin password just to let someone watch a screen
 
+### Cast codecs (1.26.1)
+
+- The web player only decodes H.264: H.265 / AV1 entries in the encoder dropdown are disabled with the reason shown, so picking one no longer ends in a black screen
+- A saved H.265/AV1 choice is **auto-fallen back** to a decodable encoder with a one-off warning; if the device only offers undecodable codecs you get an explicit heads-up
+- Use scrcpy / escrcpy desktop if you need H.265/AV1 — this project's cast stack stays H.264-only
+
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ---
