@@ -1,13 +1,17 @@
 <script setup>
 import { computed, ref } from "vue";
-import { Icon } from "@iconify/vue";
 import QRCode from "qrcode";
 import { useI18n } from "vue-i18n";
 
 import "../assets/add-device-modal.css";
 import AddDeviceApplePanel from "./AddDeviceApplePanel.vue";
 import AddDeviceAndroidDirectPanel from "./AddDeviceAndroidDirectPanel.vue";
-import UiButton from "./ui/UiButton.vue";
+import AddDeviceModalHeader from "./add-device/AddDeviceModalHeader.vue";
+import AddDevicePairCodeStep from "./add-device/AddDevicePairCodeStep.vue";
+import AddDevicePlatformStep from "./add-device/AddDevicePlatformStep.vue";
+import AddDeviceQrStep from "./add-device/AddDeviceQrStep.vue";
+import AddDeviceUsbStep from "./add-device/AddDeviceUsbStep.vue";
+import { buildPairFailure, buildPairResult } from "./add-device/pair-result-message.js";
 import { getErrorMessage, requestJson } from "../utils/api.js";
 
 const props = defineProps({
@@ -34,93 +38,53 @@ const qrSession = ref(null);
 const qrImageUrl = ref("");
 const qrLoading = ref(false);
 
-const platforms = [
-  {
-    id: "android",
-    icon: "mdi:android",
-    modes: ["usb", "qr", "pairCode", "direct"],
-  },
-  { id: "harmony", icon: "simple-icons:huawei", modes: ["usb"] },
-  { id: "apple", icon: "mdi:apple", modes: ["connect"] },
-];
-
 const currentDevices = computed(() => props.devices ?? []);
 
+// USB 等待页只显示「开始等之后才出现」的设备：进入该步骤时记下基线序号，
+// 这样插上线的设备才会冒出来，而不是把画廊里已有的全列一遍。
 const trackedDevices = computed(() => {
   if (step.value !== "android-usb" && step.value !== "harmony-usb") {
     return [];
   }
 
-  const baselines = baselineSerials.value;
   const platform = step.value === "harmony-usb" ? "harmony" : "android";
-  const result = [];
-
-  for (const device of currentDevices.value) {
-    if (!device?.serial) {
-      continue;
-    }
-
-    if ((device.platform ?? "android") !== platform) {
-      continue;
-    }
-
-    if (!baselines.has(device.serial)) {
-      result.push(device);
-    }
-  }
-
-  return result;
+  return currentDevices.value.filter(
+    (device) =>
+      Boolean(device?.serial) &&
+      (device.platform ?? "android") === platform &&
+      !baselineSerials.value.has(device.serial),
+  );
 });
 
 const trackedSummary = computed(() => {
   const list = trackedDevices.value;
-  const connected = list.filter((d) => d?.connected).length;
-  const unauthorized = list.filter((d) => d?.state === "unauthorized").length;
 
   return {
     total: list.length,
-    connected,
-    unauthorized,
+    connected: list.filter((device) => device?.connected).length,
+    unauthorized: list.filter((device) => device?.state === "unauthorized").length,
   };
 });
 
-function enterAndroidUsb() {
+// 进入 USB 等待页时先记快照：只有「此后才出现」的设备算新插入
+function enterUsbStep(platform) {
   baselineSerials.value = new Set(
     (currentDevices.value ?? []).map((device) => device?.serial).filter(Boolean),
   );
-  step.value = "android-usb";
+  step.value = platform === "harmony" ? "harmony-usb" : "android-usb";
 }
 
-function enterHarmonyUsb() {
-  baselineSerials.value = new Set(
-    (currentDevices.value ?? []).map((device) => device?.serial).filter(Boolean),
-  );
-  step.value = "harmony-usb";
+const enterAndroidUsb = () => enterUsbStep("android");
+const enterHarmonyUsb = () => enterUsbStep("harmony");
+
+/** 平台页只抛步骤 id，具体进入动作（是否重置表单 / 是否建二维码会话）由父组件决定 */
+function handlePlatformSelect(nextStep) {
+  ENTER_STEP[nextStep]?.();
 }
 
-function formatPairConnectMessage(connect, t) {
-  if (!connect) {
-    return t("devices.addDeviceModal.pairCode.connectSkipped");
-  }
-
-  if (connect.success) {
-    return (
-      connect.connectedEndpoint ||
-      connect.attempts?.find((item) => item.ok)?.endpoint ||
-      t("devices.addDeviceModal.pairCode.connectSuccess")
-    );
-  }
-
-  const failedAttempt = connect.attempts?.find((item) => !item.ok && item.output);
-  return failedAttempt?.output || t("devices.addDeviceModal.pairCode.connectFailed");
-}
-
-function formatPairMessage(result, t) {
-  return (
-    result?.pair?.output ||
-    result?.message ||
-    t("devices.addDeviceModal.pairCode.pairSuccess")
-  );
+// 结果对象与连接提示的拼装放在 add-device/pair-result-message.js（四条路径共用）
+function setPairFailure(message) {
+  pairResult.value = buildPairFailure(message, t);
 }
 
 async function submitPairCode() {
@@ -138,19 +102,9 @@ async function submitPairCode() {
       body: { host, port, pairingCode },
     });
 
-    pairResult.value = {
-      ok: Boolean(result.success),
-      message: formatPairMessage(result, t),
-      connectOk: Boolean(result?.connect?.success),
-      connectMessage: formatPairConnectMessage(result?.connect, t),
-    };
+    pairResult.value = buildPairResult(result, t);
   } catch (error) {
-    pairResult.value = {
-      ok: false,
-      message: getErrorMessage(error, t("devices.addDeviceModal.pairCode.pairFailed")),
-      connectOk: false,
-      connectMessage: t("devices.addDeviceModal.pairCode.connectSkipped"),
-    };
+    setPairFailure(getErrorMessage(error, t("devices.addDeviceModal.pairCode.pairFailed")));
   } finally {
     pairPending.value = false;
   }
@@ -183,12 +137,7 @@ async function createQrSession() {
   } catch (error) {
     qrSession.value = null;
     qrImageUrl.value = "";
-    pairResult.value = {
-      ok: false,
-      message: getErrorMessage(error, t("devices.addDeviceModal.qr.createFailed")),
-      connectOk: false,
-      connectMessage: t("devices.addDeviceModal.pairCode.connectSkipped"),
-    };
+    setPairFailure(getErrorMessage(error, t("devices.addDeviceModal.qr.createFailed")));
   } finally {
     qrLoading.value = false;
   }
@@ -196,12 +145,7 @@ async function createQrSession() {
 
 async function submitQrPairing() {
   if (!qrSession.value) {
-    pairResult.value = {
-      ok: false,
-      message: t("devices.addDeviceModal.qr.createFailed"),
-      connectOk: false,
-      connectMessage: t("devices.addDeviceModal.pairCode.connectSkipped"),
-    };
+    setPairFailure(t("devices.addDeviceModal.qr.createFailed"));
     return;
   }
 
@@ -218,19 +162,9 @@ async function submitQrPairing() {
       },
     });
 
-    pairResult.value = {
-      ok: Boolean(result.success),
-      message: formatPairMessage(result, t),
-      connectOk: Boolean(result?.connect?.success),
-      connectMessage: formatPairConnectMessage(result?.connect, t),
-    };
+    pairResult.value = buildPairResult(result, t);
   } catch (error) {
-    pairResult.value = {
-      ok: false,
-      message: getErrorMessage(error, t("devices.addDeviceModal.pairCode.pairFailed")),
-      connectOk: false,
-      connectMessage: t("devices.addDeviceModal.pairCode.connectSkipped"),
-    };
+    setPairFailure(getErrorMessage(error, t("devices.addDeviceModal.pairCode.pairFailed")));
   } finally {
     pairPending.value = false;
   }
@@ -262,6 +196,16 @@ function enterAppleConnect() {
 function backToPlatforms() {
   step.value = "platforms";
 }
+
+// 平台页抛的是步骤 id，这里维护 id → 进入动作的唯一映射
+const ENTER_STEP = {
+  "android-usb": enterAndroidUsb,
+  "harmony-usb": enterHarmonyUsb,
+  "android-pair-code": enterPairCodeStep,
+  "android-qr": enterQrStep,
+  "android-direct": enterDirectConnectStep,
+  "apple-connect": enterAppleConnect,
+};
 </script>
 
 <template>
@@ -273,139 +217,9 @@ function backToPlatforms() {
       aria-modal="true"
       :aria-label="t('devices.addDeviceModal.title')"
     >
-      <header class="add-device-modal__header">
-        <div>
-          <h2>
-            {{
-              step === "android-usb"
-                ? t("devices.addDeviceModal.usb.title")
-                : step === "android-pair-code"
-                  ? t("devices.addDeviceModal.pairCode.title")
-                  : step === "android-direct"
-                    ? t("devices.addDeviceModal.directConnect.title")
-                  : step === "apple-connect"
-                    ? t("devices.addDeviceModal.apple.title")
-                : t("devices.addDeviceModal.title")
-            }}
-          </h2>
-          <p>
-            {{
-              step === "android-usb"
-                ? t("devices.addDeviceModal.usb.desc")
-                : step === "android-pair-code"
-                  ? t("devices.addDeviceModal.pairCode.desc")
-                  : step === "android-direct"
-                    ? t("devices.addDeviceModal.directConnect.desc")
-                  : step === "apple-connect"
-                    ? t("devices.addDeviceModal.apple.desc")
-                : t("devices.addDeviceModal.desc")
-            }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="add-device-modal__close"
-          :aria-label="t('devices.addDeviceModal.close')"
-          @click="emit('close')"
-        >
-          ×
-        </button>
-      </header>
+      <AddDeviceModalHeader :step="step" @close="emit('close')" />
 
-      <div v-if="step === 'platforms'" class="add-device-modal__grid">
-        <article
-          v-for="item in platforms"
-          :key="item.id"
-          class="add-device-modal__card"
-          :class="{ 'add-device-modal__card--apple': item.id === 'apple' }"
-        >
-          <Icon :icon="item.icon" class="add-device-modal__icon" />
-          <h3>{{ t(`devices.addDeviceModal.platforms.${item.id}`) }}</h3>
-          <ul v-if="item.modes?.length" class="add-device-modal__modes">
-            <li
-              v-for="mode in item.modes"
-              :key="mode"
-              class="add-device-modal__mode"
-              :class="{ 'add-device-modal__mode--active': item.id === 'android' && mode === 'usb' }"
-            >
-              <button
-                v-if="item.id === 'harmony' && mode === 'usb'"
-                type="button"
-                class="add-device-modal__mode-btn"
-                @click="enterHarmonyUsb"
-              >
-                <span>{{ t("devices.addDeviceModal.harmonyModes.usb") }}</span>
-                <span class="add-device-modal__mode-badge">
-                  {{ t("devices.addDeviceModal.usb.action") }}
-                </span>
-              </button>
-              <button
-                v-else-if="item.id === 'android' && mode === 'usb'"
-                type="button"
-                class="add-device-modal__mode-btn"
-                @click="enterAndroidUsb"
-              >
-                <span>{{ t(`devices.addDeviceModal.androidModes.${mode}`) }}</span>
-                <span class="add-device-modal__mode-badge">
-                  {{ t("devices.addDeviceModal.usb.action") }}
-                </span>
-              </button>
-              <button
-                v-else-if="item.id === 'apple' && mode === 'connect'"
-                type="button"
-                class="add-device-modal__mode-btn"
-                @click="enterAppleConnect"
-              >
-                <span>{{ t("devices.addDeviceModal.appleModes.connect") }}</span>
-                <span class="add-device-modal__mode-badge">
-                  {{ t("devices.addDeviceModal.apple.action") }}
-                </span>
-              </button>
-              <button
-                v-else-if="item.id === 'android' && mode === 'direct'"
-                type="button"
-                class="add-device-modal__mode-btn"
-                @click="enterDirectConnectStep"
-              >
-                <span>{{ t(`devices.addDeviceModal.androidModes.${mode}`) }}</span>
-                <span class="add-device-modal__mode-badge">
-                  {{ t("devices.addDeviceModal.directConnect.action") }}
-                </span>
-              </button>
-              <button
-                v-else-if="item.id === 'android' && mode === 'pairCode'"
-                type="button"
-                class="add-device-modal__mode-btn"
-                @click="enterPairCodeStep"
-              >
-                <span>{{ t(`devices.addDeviceModal.androidModes.${mode}`) }}</span>
-                <span class="add-device-modal__mode-badge">
-                  {{ t("devices.addDeviceModal.pairCode.action") }}
-                </span>
-              </button>
-              <template v-else>
-                <button
-                  v-if="item.id === 'android' && mode === 'qr'"
-                  type="button"
-                  class="add-device-modal__mode-btn"
-                  @click="enterQrStep"
-                >
-                  <span>{{ t(`devices.addDeviceModal.androidModes.${mode}`) }}</span>
-                  <span class="add-device-modal__mode-badge">
-                    {{ t("devices.addDeviceModal.qr.action") }}
-                  </span>
-                </button>
-                <template v-else>
-                  <span>{{ t(`devices.addDeviceModal.androidModes.${mode}`) }}</span>
-                  <span class="add-device-modal__mode-badge">
-                    {{ t("devices.addDeviceModal.comingSoon") }}
-                  </span>
-                </template>
-              </template>
-            </li>
-          </ul>
-        </article>
-      </div>
+      <AddDevicePlatformStep v-if="step === 'platforms'" @select="handlePlatformSelect" />
 
       <AddDeviceApplePanel
         v-else-if="step === 'apple-connect'"
@@ -413,103 +227,23 @@ function backToPlatforms() {
         :on-connected="() => emit('close')"
       />
 
-      <div v-else-if="step === 'harmony-usb'" class="add-device-modal__usb">
-        <div class="add-device-modal__usb-layout">
-          <div class="add-device-modal__usb-status">
-            <p>{{ t("devices.addDeviceModal.harmonyUsb.desc") }}</p>
-            <p class="add-device-modal__usb-summary">
-              {{
-                t("devices.addDeviceModal.usb.summary", {
-                  total: trackedSummary.total,
-                  connected: trackedSummary.connected,
-                  unauthorized: trackedSummary.unauthorized,
-                })
-              }}
-            </p>
-            <p v-if="trackedDevices.length === 0" class="add-device-modal__usb-empty">
-              {{ t("devices.addDeviceModal.harmonyUsb.empty") }}
-            </p>
-            <ul v-else class="add-device-modal__usb-list">
-              <li v-for="device in trackedDevices" :key="device.serial" class="add-device-modal__usb-item">
-                <div class="add-device-modal__usb-item-main">
-                  <strong>{{ device.displayName || device.serial }}</strong>
-                  <span class="add-device-modal__usb-item-sub">{{ device.serial }}</span>
-                </div>
-                <span class="add-device-modal__usb-state add-device-modal__usb-state--ok">
-                  {{ t("devices.addDeviceModal.usb.stateConnected") }}
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="add-device-modal__usb-actions">
-          <UiButton variant="ghost" @click="backToPlatforms">
-            {{ t("common.back") }}
-          </UiButton>
-          <UiButton variant="primary" @click="emit('close')">
-            {{ t("devices.addDeviceModal.usb.done") }}
-          </UiButton>
-        </div>
-      </div>
+      <AddDeviceUsbStep
+        v-else-if="step === 'harmony-usb'"
+        variant="harmony"
+        :devices="trackedDevices"
+        :summary="trackedSummary"
+        @back="backToPlatforms"
+        @done="emit('close')"
+      />
 
-      <div v-else-if="step === 'android-usb'" class="add-device-modal__usb">
-        <div class="add-device-modal__usb-layout">
-          <div class="add-device-modal__usb-hero" aria-hidden="true">
-            <div class="usb-hero__phone" />
-            <div class="usb-hero__cable">
-              <span class="usb-hero__cable-line" />
-              <span class="usb-hero__plug" />
-            </div>
-          </div>
-
-          <div class="add-device-modal__usb-status">
-            <p class="add-device-modal__usb-summary">
-              {{
-                t("devices.addDeviceModal.usb.summary", {
-                  total: trackedSummary.total,
-                  connected: trackedSummary.connected,
-                  unauthorized: trackedSummary.unauthorized,
-                })
-              }}
-            </p>
-            <p v-if="trackedDevices.length === 0" class="add-device-modal__usb-empty">
-              {{ t("devices.addDeviceModal.usb.empty") }}
-            </p>
-            <ul v-else class="add-device-modal__usb-list">
-              <li v-for="device in trackedDevices" :key="device.serial" class="add-device-modal__usb-item">
-                <div class="add-device-modal__usb-item-main">
-                  <strong>{{ device.displayName || device.serial }}</strong>
-                  <span class="add-device-modal__usb-item-sub">{{ device.serial }}</span>
-                </div>
-                <span
-                  class="add-device-modal__usb-state"
-                  :class="{
-                    'add-device-modal__usb-state--ok': device.connected,
-                    'add-device-modal__usb-state--warn': device.state === 'unauthorized',
-                  }"
-                >
-                  {{
-                    device.connected
-                      ? t("devices.addDeviceModal.usb.stateConnected")
-                      : device.state === "unauthorized"
-                        ? t("devices.addDeviceModal.usb.stateUnauthorized")
-                        : t("devices.addDeviceModal.usb.stateDetecting")
-                  }}
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="add-device-modal__usb-actions">
-          <UiButton variant="ghost" @click="backToPlatforms">
-            {{ t("common.back") }}
-          </UiButton>
-          <UiButton variant="primary" @click="emit('close')">
-            {{ t("devices.addDeviceModal.usb.done") }}
-          </UiButton>
-        </div>
-      </div>
+      <AddDeviceUsbStep
+        v-else-if="step === 'android-usb'"
+        variant="android"
+        :devices="trackedDevices"
+        :summary="trackedSummary"
+        @back="backToPlatforms"
+        @done="emit('close')"
+      />
 
       <AddDeviceAndroidDirectPanel
         v-else-if="step === 'android-direct'"
@@ -517,137 +251,26 @@ function backToPlatforms() {
         :on-connected="() => emit('close')"
       />
 
-      <div v-else-if="step === 'android-pair-code'" class="add-device-modal__pair-code">
-        <div class="add-device-modal__pair-hint">
-          <h3>{{ t("devices.addDeviceModal.pairCode.stepsTitle") }}</h3>
-          <ol>
-            <li>{{ t("devices.addDeviceModal.pairCode.stepDevOptions") }}</li>
-            <li>{{ t("devices.addDeviceModal.pairCode.stepWirelessDebug") }}</li>
-            <li>{{ t("devices.addDeviceModal.pairCode.stepUsePairCode") }}</li>
-          </ol>
-        </div>
+      <AddDevicePairCodeStep
+        v-else-if="step === 'android-pair-code'"
+        :form="pairForm"
+        :pending="pairPending"
+        :result="pairResult"
+        @submit="submitPairCode"
+        @back="backToPlatforms"
+      />
 
-        <form class="add-device-modal__pair-form" @submit.prevent="submitPairCode">
-          <label>
-            <span>{{ t("devices.addDeviceModal.pairCode.ipPort") }}</span>
-            <div class="add-device-modal__pair-row">
-              <input
-                v-model.trim="pairForm.host"
-                type="text"
-                required
-                :placeholder="t('devices.addDeviceModal.pairCode.ipPlaceholder')"
-              />
-              <input
-                v-model.trim="pairForm.port"
-                type="number"
-                min="1"
-                max="65535"
-                required
-                :placeholder="t('devices.addDeviceModal.pairCode.portPlaceholder')"
-              />
-            </div>
-          </label>
-          <label>
-            <span>{{ t("devices.addDeviceModal.pairCode.codeLabel") }}</span>
-            <input
-              v-model.trim="pairForm.pairingCode"
-              type="text"
-              required
-              :placeholder="t('devices.addDeviceModal.pairCode.codePlaceholder')"
-            />
-          </label>
-
-          <div class="add-device-modal__pair-actions">
-            <UiButton variant="ghost" @click="backToPlatforms">
-              {{ t("common.back") }}
-            </UiButton>
-            <UiButton variant="primary" attr-type="submit" :disabled="pairPending">
-              {{
-                pairPending
-                  ? t("devices.addDeviceModal.pairCode.pairing")
-                  : t("devices.addDeviceModal.pairCode.submit")
-              }}
-            </UiButton>
-          </div>
-        </form>
-
-        <div v-if="pairResult" class="add-device-modal__pair-result">
-          <p :class="pairResult.ok ? 'result-ok' : 'result-fail'">
-            {{ pairResult.ok ? t("devices.addDeviceModal.pairCode.pairSuccess") : t("devices.addDeviceModal.pairCode.pairFailed") }}
-            ：{{ pairResult.message }}
-          </p>
-          <p :class="pairResult.connectOk ? 'result-ok' : 'result-fail'">
-            {{
-              pairResult.connectOk
-                ? t("devices.addDeviceModal.pairCode.connectSuccess")
-                : t("devices.addDeviceModal.pairCode.connectFailed")
-            }}
-            ：{{ pairResult.connectMessage }}
-          </p>
-        </div>
-      </div>
-
-      <div v-else-if="step === 'android-qr'" class="add-device-modal__pair-code">
-        <div class="add-device-modal__pair-hint">
-          <h3>{{ t("devices.addDeviceModal.qr.stepsTitle") }}</h3>
-          <ol>
-            <li>{{ t("devices.addDeviceModal.qr.stepWirelessDebug") }}</li>
-            <li>{{ t("devices.addDeviceModal.qr.stepPairQr") }}</li>
-            <li>{{ t("devices.addDeviceModal.qr.stepScanFromPhone") }}</li>
-          </ol>
-        </div>
-
-        <form class="add-device-modal__pair-form">
-          <div class="add-device-modal__qr-panel">
-            <p class="add-device-modal__qr-title">
-              {{ t("devices.addDeviceModal.qr.imageTitle") }}
-            </p>
-            <div v-if="qrLoading" class="add-device-modal__qr-loading">
-              {{ t("devices.addDeviceModal.qr.generating") }}
-            </div>
-            <img
-              v-else-if="qrImageUrl"
-              class="add-device-modal__qr-image"
-              :src="qrImageUrl"
-              :alt="t('devices.addDeviceModal.qr.imageAlt')"
-            />
-            <p v-if="qrSession" class="add-device-modal__qr-code">
-              {{ t("devices.addDeviceModal.qr.pairCodeHint", { code: qrSession.pairingCode }) }}
-            </p>
-          </div>
-        </form>
-
-        <div class="add-device-modal__pair-actions add-device-modal__pair-actions--full">
-          <UiButton variant="ghost" @click="backToPlatforms">
-            {{ t("common.back") }}
-          </UiButton>
-          <UiButton variant="ghost" :disabled="qrLoading || pairPending" @click="createQrSession">
-            {{ t("devices.addDeviceModal.qr.refresh") }}
-          </UiButton>
-          <UiButton variant="primary" :disabled="pairPending" @click="submitQrPairing">
-            {{
-              pairPending
-                ? t("devices.addDeviceModal.pairCode.pairing")
-                : t("devices.addDeviceModal.qr.confirmScanned")
-            }}
-          </UiButton>
-        </div>
-
-        <div v-if="pairResult" class="add-device-modal__pair-result">
-          <p :class="pairResult.ok ? 'result-ok' : 'result-fail'">
-            {{ pairResult.ok ? t("devices.addDeviceModal.pairCode.pairSuccess") : t("devices.addDeviceModal.pairCode.pairFailed") }}
-            ：{{ pairResult.message }}
-          </p>
-          <p :class="pairResult.connectOk ? 'result-ok' : 'result-fail'">
-            {{
-              pairResult.connectOk
-                ? t("devices.addDeviceModal.pairCode.connectSuccess")
-                : t("devices.addDeviceModal.pairCode.connectFailed")
-            }}
-            ：{{ pairResult.connectMessage }}
-          </p>
-        </div>
-      </div>
+      <AddDeviceQrStep
+        v-else-if="step === 'android-qr'"
+        :image-url="qrImageUrl"
+        :loading="qrLoading"
+        :session="qrSession"
+        :pending="pairPending"
+        :result="pairResult"
+        @back="backToPlatforms"
+        @refresh="createQrSession"
+        @confirm="submitQrPairing"
+      />
     </section>
   </div>
 </template>
