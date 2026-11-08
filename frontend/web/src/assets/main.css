@@ -1,8 +1,16 @@
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  --font-heading: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-body: "DM Sans", "Segoe UI", sans-serif;
+  /* 字体一律走系统栈（T-412）：不再从外网字体 CDN 取那两套西文字体，
+     内网/离线环境不会「先回退再闪一次」，也省掉首屏的跨域 DNS + TLS。
+     中文优先 PingFang SC → Microsoft YaHei → Noto Sans CJK SC，
+     西文 -apple-system / Segoe UI Variable / Inter 依次兜底，最后 system-ui。
+     标题与正文同族，层级只靠 font-weight 与字号区分，故两个变量指向同一栈。 */
+  --font-sans:
+    -apple-system, "Segoe UI Variable", "Segoe UI", Inter, system-ui,
+    "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", sans-serif;
+  --font-heading: var(--font-sans);
+  --font-body: var(--font-sans);
   --bg: #eef2f7;
   --bg-muted: #f8fafc;
   --bg-elevated: rgba(255, 255, 255, 0.82);
@@ -594,13 +602,22 @@ h2 {
 }
 
 .ghost-button {
-  padding: 0.45rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 2rem;
+  padding: 0.3rem 0.85rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-elevated);
   color: var(--text);
-  font-size: 0.84rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 .ghost-button:hover:not(:disabled) {
@@ -672,6 +689,18 @@ h2 {
   aspect-ratio: 3 / 4;
   min-height: 12rem;
   background: var(--bg-preview);
+}
+
+/* 离线设备没有画面可看，竖屏 3/4 只会留下一个巨大空白盒；
+   压缩成 16/10，让画廊里多台离线设备也能一屏排下 */
+.device-card--offline .device-card__preview {
+  aspect-ratio: 16 / 10;
+  min-height: 9rem;
+  background-image: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in srgb, var(--line) 45%, transparent),
+    transparent 70%
+  );
 }
 
 .device-card__preview img {
@@ -1956,10 +1985,9 @@ h2 {
   opacity: 0.85;
 }
 
-.field__toggle,
-.primary-button {
+.field__toggle {
   border: 0;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-md);
 }
 
 .field__toggle {
@@ -1992,21 +2020,49 @@ h2 {
   font-size: 0.9rem;
 }
 
+/* 主按钮单一来源：登录卡、设置页、空态 CTA 共用这一套高度/圆角/字号/过渡，
+   避免再出现「三套主按钮」（同一页面里圆角 10px / 14px / 999px 混杂） */
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
   width: 100%;
-  padding: 0.95rem 1.2rem;
+  min-height: 2.75rem;
+  padding: 0.7rem 1.2rem;
+  border: 0;
+  border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--primary), var(--primary-strong));
   color: var(--primary-text);
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 .primary-button:hover:not(:disabled) {
-  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+.primary-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-1);
+}
+
+.primary-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .primary-button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.65;
+  transform: none;
+  box-shadow: none;
 }
 
 code {
