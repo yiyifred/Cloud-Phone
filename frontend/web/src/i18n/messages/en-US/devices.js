@@ -121,6 +121,7 @@ export default {
         stepWirelessDebug: "Enable Developer options -> Wireless debugging",
         stepPairQr: "Choose Pair device with QR code",
         stepScanFromPhone: "Scan the QR code below with your phone",
+        imageTitle: "QR code",
         generating: "Generating QR code...",
         imageAlt: "QR pairing code",
         pairCodeHint: "Pair code: {code}",
