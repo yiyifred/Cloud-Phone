@@ -1,5 +1,8 @@
 export default {
   common: {
+    confirmTitle: "請確認",
+    confirm: "確定",
+    cancel: "取消",
     dateUnset: "未設定",
     dateUnknown: "未知時間",
     show: "顯示",

@@ -1,5 +1,8 @@
 export default {
   common: {
+    confirmTitle: "Please confirm",
+    confirm: "Confirm",
+    cancel: "Cancel",
     dateUnset: "Not set",
     dateUnknown: "Unknown time",
     show: "Show",

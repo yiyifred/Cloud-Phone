@@ -1,5 +1,8 @@
 export default {
   common: {
+    confirmTitle: "確認",
+    confirm: "OK",
+    cancel: "キャンセル",
     dateUnset: "未設定",
     dateUnknown: "不明な時刻",
     show: "表示",

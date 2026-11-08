@@ -1,5 +1,8 @@
 export default {
   common: {
+    confirmTitle: "확인",
+    confirm: "확인",
+    cancel: "취소",
     dateUnset: "설정 안 됨",
     dateUnknown: "알 수 없는 시간",
     show: "표시",

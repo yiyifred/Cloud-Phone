@@ -2,6 +2,8 @@
 import { computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
+import { requestConfirm } from "../utils/confirm-dialog.js";
+
 import AppIcon from "./AppIcon.vue";
 import { buildControlLabel, useDeviceControl } from "../composables/useDeviceControl.js";
 import { logWarn } from "../utils/app-event-logger.js";
@@ -92,9 +94,10 @@ const button = computed(() => {
 
 async function handleTakeOver() {
   // 抢占会打断对方正在进行的操作，必须二次确认；确认框文案里带上持有者标识
-  const confirmed = window.confirm(
-    t("devices.control.takeOverConfirm", { name: holderName.value }),
-  );
+  const confirmed = await requestConfirm({
+    message: t("devices.control.takeOverConfirm", { name: holderName.value }),
+    danger: true,
+  });
 
   if (!confirmed) {
     return;

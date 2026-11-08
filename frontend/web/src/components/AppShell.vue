@@ -7,6 +7,7 @@ import AuthPasswordModal from "./AuthPasswordModal.vue";
 import ConsoleLayout from "./ConsoleLayout.vue";
 import IconHelperGatePanel from "./IconHelperGatePanel.vue";
 import ReadOnlyBanner from "./ReadOnlyBanner.vue";
+import ConfirmDialog from "./ui/ConfirmDialog.vue";
 import SkeletonCard from "./ui/SkeletonCard.vue";
 import { markViewerSession, useAccessRole } from "../composables/useAccessRole.js";
 import { useAppFeedback } from "../composables/useAppFeedback.js";
@@ -293,5 +294,7 @@ async function saveSettingsForm() {
       @allow="answerConsent(true)"
       @deny="answerConsent(false)"
     />
+    <!-- 全局确认框：所有 window.confirm 的替代品，样式/语言/危险态统一 -->
+    <ConfirmDialog />
   </div>
 </template>

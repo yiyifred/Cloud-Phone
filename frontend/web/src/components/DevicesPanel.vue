@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { MonitorSmartphone } from "lucide-vue-next";
 
+import { requestConfirm } from "../utils/confirm-dialog.js";
+
 import AddDeviceModal from "./AddDeviceModal.vue";
 import AppIcon from "./AppIcon.vue";
 import DeviceCard from "./DeviceCard.vue";
@@ -149,9 +151,11 @@ async function handleDisconnectDevice() {
     return;
   }
 
-  const confirmed = window.confirm(
-    t("devices.contextMenu.disconnectConfirm", { name: device.displayName }),
-  );
+  const confirmed = await requestConfirm({
+    message: t("devices.contextMenu.disconnectConfirm", { name: device.displayName }),
+    confirmText: t("devices.contextMenu.disconnect"),
+    danger: true,
+  });
 
   if (!confirmed) {
     return;

@@ -13,6 +13,7 @@ import { NInput, NSelect } from "naive-ui";
 import UiButton from "../ui/UiButton.vue";
 import { useAppFeedback } from "../../composables/useAppFeedback.js";
 import { getErrorMessage } from "../../utils/api.js";
+import { requestConfirm } from "../../utils/confirm-dialog.js";
 import { formatDate } from "../../utils/format-date.js";
 import { logInfo, logWarn } from "../../utils/app-event-logger.js";
 import {
@@ -137,7 +138,11 @@ async function handleCopy() {
 
 async function handleRevoke(item) {
   const name = item?.label || t("share.untitled");
-  const confirmed = window.confirm(t("share.revokeConfirm", { label: name }));
+  const confirmed = await requestConfirm({
+    message: t("share.revokeConfirm", { label: name }),
+    confirmText: t("share.revoke"),
+    danger: true,
+  });
 
   if (!confirmed) {
     return;
