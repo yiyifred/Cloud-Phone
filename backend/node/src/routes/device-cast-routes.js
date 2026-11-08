@@ -19,6 +19,7 @@ import { handleHarmonyCastRoute } from "./harmony-cast-routes.js";
 import { getIosCastSession, startIosCast } from "../services/ios-cast/index.js";
 import { logIosCastError, logIosCastInfo } from "../services/ios-cast/cast-logger.js";
 import { handleIosCastRoute } from "./ios-cast-routes.js";
+import { withCastSessionTracking } from "../metrics/cast-tracker.js";
 import { readProtectedJsonBody, sendProtectedJson } from "../utils/protected-http.js";
 
 export {
@@ -41,7 +42,7 @@ export async function handleDeviceCastRoute(req, res, method, pathname) {
     if (platform === "ios") {
       try {
         logIosCastInfo(serial, "api.cast.start", { options: body ?? {} });
-        const session = await startIosCast(serial);
+        const session = await withCastSessionTracking("ios", serial, () => startIosCast(serial));
 
         sendProtectedJson(res, 200, {
           success: true,
@@ -66,7 +67,9 @@ export async function handleDeviceCastRoute(req, res, method, pathname) {
     if (platform === "harmony") {
       try {
         logHarmonyCastInfo(serial, "api.cast.start", { options: body ?? {} });
-        const session = await startHarmonyCast(serial, body ?? {});
+        const session = await withCastSessionTracking("harmony", serial, () =>
+          startHarmonyCast(serial, body ?? {}),
+        );
 
         sendProtectedJson(res, 200, {
           success: true,

@@ -9,6 +9,7 @@ import {
 } from "../services/harmony-cast/index.js";
 import { logHarmonyCastError, logHarmonyCastInfo } from "../services/harmony-cast/cast-logger.js";
 import { appendHarmonyStartupLog } from "../services/harmony-cast/startup-log.js";
+import { withCastSessionTracking } from "../metrics/cast-tracker.js";
 import { readProtectedJsonBody, sendProtectedJson } from "../utils/protected-http.js";
 
 export async function handleHarmonyCastRoute(req, res, method, pathname) {
@@ -22,7 +23,9 @@ export async function handleHarmonyCastRoute(req, res, method, pathname) {
     try {
       const body = await readProtectedJsonBody(req, res);
       logHarmonyCastInfo(serial, "api.cast.start", { options: body ?? {} });
-      const session = await startHarmonyCast(serial, body ?? {});
+      const session = await withCastSessionTracking("harmony", serial, () =>
+        startHarmonyCast(serial, body ?? {}),
+      );
 
       sendProtectedJson(res, 200, {
         success: true,
@@ -49,7 +52,7 @@ export async function handleHarmonyCastRoute(req, res, method, pathname) {
 
     try {
       logHarmonyCastInfo(serial, "api.cast.stop", {});
-      const stopped = await stopHarmonyCast(serial);
+      const stopped = await withCastSessionTracking("harmony", serial, () => stopHarmonyCast(serial));
       sendProtectedJson(res, 200, {
         success: true,
         version: APP_VERSION,

@@ -17,6 +17,7 @@ import {
   installCastControlFrameGate,
 } from "../services/control-guard.js";
 import { logCastInfo, logCastWarn } from "../services/scrcpy-cast/cast-logger.js";
+import { wsConnections } from "../metrics/definitions.js";
 
 /** Terminal sockets spawn an adb shell each: a single session must not be able to fork-bomb the host. */
 const TERMINAL_MAX_PER_DEVICE = 4;
@@ -126,6 +127,10 @@ export function setupDeviceWebSocket(server) {
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       ws.once("close", release);
+      // 用 gauge 记「当前占着几个并发槽位」：上面 acquire*Slot 的上限告急要能提前看见；
+      // kind 只取 video/control/terminal 三个固定值，序列数因此有界
+      wsConnections.inc({ kind: channel });
+      ws.once("close", () => wsConnections.dec({ kind: channel }));
 
       if (terminalRoute) {
         // strict 下非持有者不许开 shell：升级后立刻带原因关闭，避免先起 adb shell 再断

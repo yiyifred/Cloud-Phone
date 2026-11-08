@@ -1,4 +1,5 @@
 import { LOGIN_THROTTLE } from "../config/auth.js";
+import { loginFailuresTotal } from "../metrics/definitions.js";
 
 /**
  * In-memory login throttle: per-IP exponential backoff plus a global budget
@@ -32,6 +33,7 @@ export function checkLoginAllowed(clientKey) {
   pruneGlobal(now);
 
   if (globalLockedUntil > now) {
+    loginFailuresTotal.inc({ reason: "global_lockout" });
     return {
       allowed: false,
       reason: "global_lockout",
@@ -46,6 +48,7 @@ export function checkLoginAllowed(clientKey) {
   }
 
   if (bucket.lockedUntil > now) {
+    loginFailuresTotal.inc({ reason: "ip_lockout" });
     return {
       allowed: false,
       reason: "ip_lockout",
@@ -58,6 +61,8 @@ export function checkLoginAllowed(clientKey) {
 
 /** Record a wrong password; extends the per-IP lock exponentially. */
 export function recordLoginFailure(clientKey) {
+  // reason 只分三类（密码错 / 单 IP 锁 / 全局锁），标签因此不会随攻击者膨胀
+  loginFailuresTotal.inc({ reason: "bad_password" });
   const now = Date.now();
   pruneGlobal(now);
 

@@ -9,6 +9,7 @@ import {
 } from "../services/ios-cast/index.js";
 import { logIosCastError, logIosCastInfo } from "../services/ios-cast/cast-logger.js";
 import { appendIosStartupLog } from "../services/ios-cast/startup-log.js";
+import { withCastSessionTracking } from "../metrics/cast-tracker.js";
 import { sendProtectedJson } from "../utils/protected-http.js";
 
 export async function handleIosCastRoute(req, res, method, pathname) {
@@ -21,7 +22,7 @@ export async function handleIosCastRoute(req, res, method, pathname) {
 
     try {
       logIosCastInfo(serial, "api.cast.start", {});
-      const session = await startIosCast(serial);
+      const session = await withCastSessionTracking("ios", serial, () => startIosCast(serial));
       sendProtectedJson(res, 200, { success: true, version: APP_VERSION, ...session });
     } catch (error) {
       logIosCastError(serial, "api.cast.start_failed", {
@@ -42,7 +43,7 @@ export async function handleIosCastRoute(req, res, method, pathname) {
     const serial = decodeURIComponent(stopMatch[1]);
 
     try {
-      const stopped = await stopIosCast(serial);
+      const stopped = await withCastSessionTracking("ios", serial, () => stopIosCast(serial));
       sendProtectedJson(res, 200, { success: true, version: APP_VERSION, serial, stopped });
     } catch (error) {
       sendProtectedJson(res, 500, {
