@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.28.1 - 2026-11-09
+
+**Android 编译修复 · Waydroid 端到端投屏验证**
+
+- **Android 编译修复（T-437）**：`cast/CastWebSocketSession.java`、`cast/JpegStreamPlayer.java`、`terminal/TerminalWebSocket.java` 在子包里使用 `ServerUrl` 却未 import，导致 `1.28.0` 的 `assembleDebug` 直接失败；补三行 `import com.yiyi.cloud_phone.ServerUrl;` 后 `:app:assembleDebug --rerun-tasks` 32 任务全部执行并 `BUILD SUCCESSFUL`
+- **Waydroid 端到端投屏验证（T-437）**：Waydroid 作为被控设备接入后端，明文 `ws://` 与 `BACKEND_TLS=1` 的 `wss://` 两条链路各自抓到 23 个视频包、约 424 KB Annex-B 帧；`ffprobe` 识别为 `h264 1280x768`、可解 22 帧；设备在 Web UI 画廊显示在线（`192.168.240.112:5555`）
+- **投屏协议要点**：客户端连 `/api/devices/<serial>/cast/ws` 后必须补发 type-101 视频参数包，否则 `WsCastSession.join()` 停在 "waiting for stream parameters" 不出帧
+- 任务单 `tasks/T-437`
+
 ## 1.28.0 - 2026-11-08
 
 **后端 HTTPS · Prometheus 指标 · 深色模式收口 · 大文件收敛**

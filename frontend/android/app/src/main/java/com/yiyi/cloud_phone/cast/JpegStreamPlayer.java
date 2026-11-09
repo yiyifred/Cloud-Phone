@@ -1,5 +1,7 @@
 package com.yiyi.cloud_phone.cast;
 
+import com.yiyi.cloud_phone.ServerUrl;
+
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Handler;
