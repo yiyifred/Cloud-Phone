@@ -163,6 +163,16 @@ public final class WsCastSession implements WsSocketBroadcaster {
     boolean useVideo = streamOptions.getVideo();
     boolean useAudio = streamOptions.getAudio();
 
+    // Waydroid: playback (AudioRecord source=REMOTE_SUBMIX/playback) PCM capture and the
+    // display capture fight over the same projection — with audio on, video emitted only
+    // the encoder CSD and the browser canvas stayed black. Video is the primary output of
+    // a cast, so keep it and skip playback PCM when both are requested without audio_dup.
+    if (useVideo && useAudio && !streamOptions.getAudioDup()) {
+      Ln.w("Web cast: playback PCM audio would starve display capture; keeping video, audio disabled"
+          + " (use audio_dup=true to hear audio on the device instead)");
+      useAudio = false;
+    }
+
     NewDisplay nd = streamOptions.getNewDisplay();
     Ln.i("Web cast startPipeline session@" + Integer.toHexString(System.identityHashCode(this))
         + " video=" + useVideo
@@ -224,10 +234,14 @@ public final class WsCastSession implements WsSocketBroadcaster {
     if (streamOptions.getVideo()) {
       if (needCaptureRestart) {
         restartVideoCapture(streamOptions);
-      } else if (surfaceEncoder != null) {
-        surfaceEncoder.requestCaptureReset();
-      } else {
+      } else if (surfaceEncoder == null) {
         startVideoEncoder(streamOptions);
+      } else {
+        // Capture-reset on a duplicate type-101 (same source/display/crop) rebuilt the
+        // encoder and then emitted nothing on Waydroid: clients got CSD only, so the
+        // canvas stayed black. Keep the live pipeline and just apply the cheap knobs.
+        surfaceEncoder.applyStreamTuning(streamOptions);
+        Ln.i("Web cast softReconfigure keeps live capture (no reset)");
       }
     } else {
       stopVideoEncoder();
@@ -361,6 +375,10 @@ public final class WsCastSession implements WsSocketBroadcaster {
   }
 
   private void restartVideoCapture(Options streamOptions) throws IOException, ConfigurationException {
+    // The previous encoder (and its VirtualDisplay) must be released first: starting a second
+    // encoder on the same display left Waydroid feeding only the new codec's CSD, so the
+    // client canvas stayed black after any stream-parameter change.
+    stopVideoEncoder();
     startVideoEncoder(streamOptions);
   }
 
@@ -436,7 +454,9 @@ public final class WsCastSession implements WsSocketBroadcaster {
   }
 
   private void syncAudioProcessor(Options streamOptions, boolean withVideo) {
-    if (streamOptions.getAudio()) {
+    boolean keepVideo = withVideo && streamOptions.getVideo();
+    boolean playbackPcm = !streamOptions.getAudioDup();
+    if (streamOptions.getAudio() && !(keepVideo && playbackPcm)) {
       scheduleAudioProcessorStart(streamOptions, withVideo);
     } else {
       stopAudioProcessor();

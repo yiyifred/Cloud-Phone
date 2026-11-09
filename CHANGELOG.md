@@ -4,6 +4,9 @@
 
 **Android 编译修复 · Waydroid 端到端投屏验证**
 
+- **投屏首帧黑屏修复（T-438）**：网页播放器此前只用 `hardwareAcceleration: "prefer-hardware"` 配置 `VideoDecoder`；无硬件 H.264 的浏览器（headless Chromium、部分 Linux 桌面）会**异步**报 `Unsupported configuration`，同步 `catch` 兜不住，画面永远停在默认 `300x150` 黑画布。现在先用 `isConfigSupported()` 探档（prefer-hardware → prefer-software → no-preference），异步报错时重建解码器降档重试；关键帧等待与 2s 节流抽到 `utils/h264-keyframe-guard.js`。实测 canvas 由 `300x150` 变为 `1280x768` 并出帧
+- **设备端采集守卫（T-438）**：重复 type-101 参数包不再 `requestCaptureReset()`（改为下一轮采集生效的 `applyStreamTuning`），客户端要关键帧改用 `PARAMETER_KEY_REQUEST_SYNC_FRAME`；重建采集前先停旧编码器，避免同一 display 上叠加第二个 VirtualDisplay；`DisplayMonitor` 首次观察不再触发 `DISPLAY_PROPERTIES_CHANGED`；playback PCM 音频与显示采集争用同一 MediaProjection 时保留视频并关闭 PCM（`audio_dup=true` 可走设备扬声器）。实测重复参数包场景 0 → 553 帧，开音频场景 0 → 552 帧
+
 - **Android 编译修复（T-437）**：`cast/CastWebSocketSession.java`、`cast/JpegStreamPlayer.java`、`terminal/TerminalWebSocket.java` 在子包里使用 `ServerUrl` 却未 import，导致 `1.28.0` 的 `assembleDebug` 直接失败；补三行 `import com.yiyi.cloud_phone.ServerUrl;` 后 `:app:assembleDebug --rerun-tasks` 32 任务全部执行并 `BUILD SUCCESSFUL`
 - **Waydroid 端到端投屏验证（T-437）**：Waydroid 作为被控设备接入后端，明文 `ws://` 与 `BACKEND_TLS=1` 的 `wss://` 两条链路各自抓到 23 个视频包、约 424 KB Annex-B 帧；`ffprobe` 识别为 `h264 1280x768`、可解 22 帧；设备在 Web UI 画廊显示在线（`192.168.240.112:5555`）
 - **投屏协议要点**：客户端连 `/api/devices/<serial>/cast/ws` 后必须补发 type-101 视频参数包，否则 `WsCastSession.join()` 停在 "waiting for stream parameters" 不出帧

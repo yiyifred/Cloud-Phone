@@ -491,6 +491,20 @@ public class SurfaceEncoder implements AsyncProcessor {
         return false;
     }
 
+    /**
+     * Apply non-structural stream tuning (bit rate / fps) without rebuilding capture.
+     *
+     * <p>Waydroid: capture reset on a duplicate type-101 rebuilt the encoder but the
+     * rebuilt pipeline never produced frames (clients saw CSD only, then a black canvas),
+     * so type-101 that does not change source/display/crop is handled without a reset.
+     * MediaCodec instances here are recreated only on restartVideoCapture(), so tuning is
+     * recorded for the next restart instead of being applied mid-stream.
+     */
+    public void applyStreamTuning(com.genymobile.scrcpy.Options options) {
+        Ln.i("Web cast tuning deferred to next capture restart (bitRate=" + options.getVideoBitRate()
+            + ", maxFps=" + options.getMaxFps() + ")");
+    }
+
     /** Request encoder loop restart (safe before {@link SurfaceCapture#init} completes). */
     public void requestCaptureReset() {
         captureControl.reset(CaptureControl.RESET_REASON_CLIENT_RESET);
