@@ -1,5 +1,7 @@
 package com.yiyi.cloud_phone.terminal;
 
+import com.yiyi.cloud_phone.ServerUrl;
+
 import com.yiyi.cloud_phone.SessionCookieHelper;
 
 import okhttp3.OkHttpClient;
