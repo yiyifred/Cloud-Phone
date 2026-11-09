@@ -130,7 +130,14 @@ public class DisplayMonitor {
             DisplayProperties newProps = new DisplayProperties(di.getSize(), di.getRotation());
 
             DisplayProperties oldProps = getAndSetDisplayProperties(newProps); // exchange with synchronization
-            if (!newProps.equals(oldProps)) {
+            if (oldProps == null) {
+                // First observation: no frame has been rendered yet, so there is nothing to
+                // resize. Resetting here recreated the capture on Waydroid and the rebuilt
+                // pipeline never delivered frames (clients saw a single CSD, black canvas).
+                if (Ln.isEnabled(Ln.Level.VERBOSE)) {
+                    Ln.v("DisplayMonitor: (initial) -> " + newProps + " (adopted, no reset)");
+                }
+            } else if (!newProps.equals(oldProps)) {
                 // Reset only if the properties are different
                 if (Ln.isEnabled(Ln.Level.VERBOSE)) {
                     Ln.v("DisplayMonitor: " + oldProps + " -> " + newProps);

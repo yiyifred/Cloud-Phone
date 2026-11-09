@@ -376,8 +376,10 @@ public class Controller implements AsyncProcessor, VirtualDisplayListener {
             return;
         }
 
-        Ln.i("Video capture reset");
-        captureControl.reset(CaptureControl.RESET_REASON_CLIENT_RESET);
+        // Request a keyframe on the live encoder: resetting the capture here rebuilt the
+        // pipeline and Waydroid then delivered CSD only, which showed up as a black canvas.
+        Ln.i("Video keyframe requested by client");
+        captureControl.requestSyncFrame();
     }
 
 }

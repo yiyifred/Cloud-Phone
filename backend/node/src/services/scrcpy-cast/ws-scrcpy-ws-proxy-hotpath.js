@@ -67,6 +67,9 @@ export function logProxyPacket(serial, direction, data, counters) {
   }
 
   const buffer = toBuffer(data);
+  if (process.env.CAST_DEBUG_HEX === "1" && direction === "client_to_remote" && buffer.length <= 512) {
+    logCastInfo(serial, "ws.proxy.client_hex", { len: buffer.length, hex: buffer.toString("hex").slice(0, 460) });
+  }
   const summary = summarizeWsPacket(buffer);
   if (!shouldLogPacketSummary(summary, counters, direction)) {
     return;

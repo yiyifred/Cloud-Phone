@@ -120,8 +120,13 @@ function summarizeChangeStreamParameters(buffer) {
     const width = buffer.readUInt16BE(10);
     const height = buffer.readUInt16BE(12);
     const displayId = buffer.readInt32BE(24);
+    out.bitRate = buffer.readInt32BE(1);
+    out.maxFps = buffer.readInt32BE(5);
+    out.iFrameInterval = buffer.readInt8(9);
     out.bounds = `${width}x${height}`;
     out.displayId = displayId;
+    out.sendFrameMeta = buffer.readInt8(22);
+    out.lockedOrientation = buffer.readInt8(23);
 
     const codecLen = buffer.readUInt32BE(28);
     if (codecLen > 0 && buffer.length >= 32 + codecLen) {
@@ -135,6 +140,16 @@ function summarizeChangeStreamParameters(buffer) {
         out.startApp = startApp;
       }
       out.extrasLen = codecLen;
+      out.extras = extras.slice(0, 160);
+    }
+
+    const encoderLenOff = 32 + codecLen;
+    if (buffer.length >= encoderLenOff + 4) {
+      const encLen = buffer.readUInt32BE(encoderLenOff);
+      if (encLen > 0 && buffer.length >= encoderLenOff + 4 + encLen) {
+        out.encoderName = buffer.subarray(encoderLenOff + 4, encoderLenOff + 4 + encLen).toString("utf8");
+      }
+      out.encoderLen = encLen;
     }
   } catch {
     // ignore parse errors

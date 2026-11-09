@@ -1,6 +1,7 @@
 package com.genymobile.scrcpy.video;
 
 import android.media.MediaCodec;
+import android.os.Bundle;
 
 public class CaptureControl {
 
@@ -33,6 +34,26 @@ public class CaptureControl {
             } catch (IllegalStateException e) {
                 // ignore
             }
+        }
+    }
+
+    /**
+     * Ask the running encoder for an IDR frame without rebuilding capture.
+     *
+     * <p>The Web client uses this to recover after packet loss. Recreating the capture
+     * instead (the previous behaviour) left the Waydroid pipeline emitting only CSD, so the
+     * canvas went black whenever a client requested a keyframe.
+     */
+    public synchronized void requestSyncFrame() {
+        if (runningMediaCodec == null) {
+            return;
+        }
+        try {
+            Bundle params = new Bundle();
+            params.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0);
+            runningMediaCodec.setParameters(params);
+        } catch (IllegalStateException e) {
+            // codec already stopped: the next capture restart will produce a keyframe anyway
         }
     }
 
