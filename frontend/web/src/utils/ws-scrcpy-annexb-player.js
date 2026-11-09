@@ -11,6 +11,8 @@ import {
   startCodeLenAt,
 } from "./h264-nal-utils.js";
 import { CanvasFitLayout } from "./canvas-fit.js";
+import { ACCEL_CANDIDATES, pickSupportedConfig } from "./h264-decoder-config.js";
+import { createKeyframeGuard } from "./h264-keyframe-guard.js";
 
 export class WsScrcpyAnnexBPlayer {
   static isSupported() {
@@ -23,8 +25,6 @@ export class WsScrcpyAnnexBPlayer {
       canvas.getContext("2d", { alpha: false, desynchronized: true }) ||
       canvas.getContext("2d");
     this.decoder = null;
-    this.hadIdr = false;
-    this.needIdr = false;
     this.frameIndex = 0;
     this.lastError = "";
     this.videoFrameSize = { width: 0, height: 0 };
@@ -34,13 +34,16 @@ export class WsScrcpyAnnexBPlayer {
     this.hasRenderedFrame = false;
     this.pendingFrame = null;
     this.rafId = 0;
-    this._lastKeyframeRequestAt = 0;
-    this._keyframeWaitTimer = 0;
     this._spsUnit = null;
     this._ppsUnit = null;
+    this._configAttempt = 0;
+    this._configSeq = 0;
     // 尺寸交给 CanvasFitLayout：canvas 是替换元素，object-fit 无效；width/height:100%
     // 会非等比拉伸位图（画面变形、触摸点偏移）。详见 utils/canvas-fit.js。
     this.fitLayout = this.canvas ? new CanvasFitLayout(this.canvas) : null;
+    this.keyframe = createKeyframeGuard({
+      requestKeyframe: () => this.onNeedKeyframe?.(),
+    });
 
     this.#createDecoder();
   }
@@ -50,7 +53,10 @@ export class WsScrcpyAnnexBPlayer {
       output: (frame) => this.#queueFrame(frame),
       error: (error) => {
         this.lastError = error?.message ?? String(error);
-        this.#markNeedKeyframe(true);
+        if (this.#retryWithNextAccel()) {
+          return;
+        }
+        this.keyframe.request(true);
       },
     });
   }
@@ -60,46 +66,7 @@ export class WsScrcpyAnnexBPlayer {
       return;
     }
     this.#createDecoder();
-    this.hadIdr = false;
-    this.#markNeedKeyframe(true);
-  }
-
-  #clearKeyframeWait() {
-    if (this._keyframeWaitTimer) {
-      clearTimeout(this._keyframeWaitTimer);
-      this._keyframeWaitTimer = 0;
-    }
-  }
-
-  #markNeedKeyframe(requestImmediate = false) {
-    this.needIdr = true;
-    if (!requestImmediate) {
-      return;
-    }
-    const now = performance.now();
-    if (now - this._lastKeyframeRequestAt < 2000) {
-      return;
-    }
-    this._lastKeyframeRequestAt = now;
-    this.#clearKeyframeWait();
-    try {
-      this.onNeedKeyframe?.();
-    } catch {
-      // ignore
-    }
-  }
-
-  #scheduleKeyframeWait(delayMs = 1500) {
-    this.needIdr = true;
-    if (this._keyframeWaitTimer || this.hadIdr) {
-      return;
-    }
-    this._keyframeWaitTimer = setTimeout(() => {
-      this._keyframeWaitTimer = 0;
-      if (!this.hadIdr) {
-        this.#markNeedKeyframe(true);
-      }
-    }, delayMs);
+    this.keyframe.resetOnReconfigure();
   }
 
   #cacheParameterSets(bytes) {
@@ -161,6 +128,50 @@ export class WsScrcpyAnnexBPlayer {
     this.lastError = "";
   }
 
+  /**
+   * 上一档加速模式被拒（异步 error 回调）时降档重试一次。
+   * VideoDecoder 出错后 state 会变 closed，所以必须先重建解码器。
+   */
+  #retryWithNextAccel() {
+    if (this._configAttempt >= ACCEL_CANDIDATES.length - 1) {
+      return false;
+    }
+    if (!this._spsUnit) {
+      return false;
+    }
+    this._configAttempt += 1;
+    if (this.decoder && this.decoder.state !== "closed") {
+      try {
+        this.decoder.close();
+      } catch {
+        // ignore
+      }
+    }
+    this.decoder = null;
+    this.#configureFromSps(this._spsUnit);
+    return true;
+  }
+
+  async #configureWithFallback(codec, seq) {
+    const picked = await pickSupportedConfig(
+      { codec, optimizeForLatency: true },
+      this._configAttempt,
+    );
+    if (seq !== this._configSeq || !this.decoder || this.decoder.state === "closed") {
+      return;
+    }
+    if (!picked) {
+      this.lastError = `H.264 解码配置不受支持：${codec}`;
+      return;
+    }
+    try {
+      this.decoder.configure(picked.config);
+      this._configAttempt = picked.index;
+    } catch (error) {
+      this.lastError = error?.message ?? String(error);
+    }
+  }
+
   #configureFromSps(spsNal) {
     this.#ensureDecoder();
     if (!this.decoder || this.decoder.state === "closed") {
@@ -177,20 +188,10 @@ export class WsScrcpyAnnexBPlayer {
     if (!sc || spsNal.length < sc + 4) {
       return;
     }
-    const config = {
-      codec: codecFromSps(spsNal.subarray(sc)),
-      optimizeForLatency: true,
-      hardwareAcceleration: "prefer-hardware",
-    };
-    try {
-      this.decoder.configure(config);
-    } catch {
-      try {
-        this.decoder.configure({ ...config, hardwareAcceleration: "prefer-software" });
-      } catch (error2) {
-        this.lastError = error2?.message ?? String(error2);
-      }
-    }
+    const codec = codecFromSps(spsNal.subarray(sc));
+    this._configSeq += 1;
+    const seq = this._configSeq;
+    void this.#configureWithFallback(codec, seq);
   }
 
   #decodePacket(bytes, isKey) {
@@ -198,14 +199,14 @@ export class WsScrcpyAnnexBPlayer {
     if (!this.decoder || this.decoder.state !== "configured") {
       return;
     }
-    if ((this.needIdr || !this.hadIdr) && !isKey) {
+    if ((this.keyframe.needIdr || !this.keyframe.hadIdr) && !isKey) {
       return;
     }
     const payload = isKey
       ? ensureAnnexBKeyWithParams(bytes, this._spsUnit, this._ppsUnit)
       : bytes;
     if (isKey && !annexBHasNalType(payload, 8)) {
-      this.#scheduleKeyframeWait(800);
+      this.keyframe.schedule(800);
       return;
     }
     try {
@@ -218,13 +219,11 @@ export class WsScrcpyAnnexBPlayer {
       );
       this.frameIndex += 1;
       if (isKey) {
-        this.needIdr = false;
-        this.hadIdr = true;
-        this.#clearKeyframeWait();
+        this.keyframe.onKeyframeDecoded();
       }
     } catch (error) {
       this.lastError = error?.message ?? String(error);
-      this.#markNeedKeyframe(true);
+      this.keyframe.request(true);
     }
   }
 
@@ -251,7 +250,7 @@ export class WsScrcpyAnnexBPlayer {
       }
       this.#configureFromSps(bytes.subarray(0, next));
       if (!annexBHasNalType(bytes, 5)) {
-        this.#scheduleKeyframeWait(1500);
+        this.keyframe.schedule(1500);
         return;
       }
     }
@@ -267,7 +266,7 @@ export class WsScrcpyAnnexBPlayer {
   }
 
   destroy() {
-    this.#clearKeyframeWait();
+    this.keyframe.clear();
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = 0;
@@ -287,6 +286,8 @@ export class WsScrcpyAnnexBPlayer {
     this.onNeedKeyframe = null;
     this._spsUnit = null;
     this._ppsUnit = null;
+    this._configAttempt = 0;
+    this._configSeq = 0;
     this.fitLayout?.destroy();
     this.fitLayout = null;
   }
