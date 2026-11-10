@@ -55,6 +55,18 @@ function handleKeydown(event) {
 
 const displaySrc = ref("");
 const screenshotFailed = ref(false);
+
+/**
+ * 对象 URL 解码失败（截图数据损坏、设备中途断开）时浏览器会画破图图标 + alt 文本，
+ * 比占位符更难读。这里统一退化成占位态，并释放 URL 避免泄漏。
+ */
+function handleScreenshotError() {
+  screenshotFailed.value = true;
+  if (displaySrc.value) {
+    URL.revokeObjectURL(displaySrc.value);
+    displaySrc.value = "";
+  }
+}
 let screenshotObjectUrl = "";
 let screenshotRequestId = 0;
 let visibilityObserver = null;
@@ -214,6 +226,7 @@ watch(isInView, (visible) => {
         :alt="screenshotAlt"
         decoding="async"
         loading="lazy"
+        @error="handleScreenshotError"
       />
       <div
         v-else-if="device.connected && screenshotFailed && !displaySrc"
@@ -257,7 +270,9 @@ watch(isInView, (visible) => {
         </div>
         <div v-if="device.product || device.device">
           <dt>{{ t("devices.product") }}</dt>
-          <dd>{{ [device.product, device.device].filter(Boolean).join(" · ") }}</dd>
+          <dd :title="[device.product, device.device].filter(Boolean).join(' · ')">
+            {{ [device.product, device.device].filter(Boolean).join(" · ") }}
+          </dd>
         </div>
         <div>
           <dt>{{ t("devices.system") }}</dt>

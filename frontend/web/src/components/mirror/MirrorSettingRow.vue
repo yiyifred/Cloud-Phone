@@ -32,34 +32,11 @@ defineProps({
     <HelpHint v-if="help" :content="help" :title="label" size="sm" />
   </div>
 
-  <NFormItem
-    v-else-if="variant === 'checkbox'"
-    :show-feedback="false"
-    :style="nested ? { paddingLeft: '0.75rem' } : null"
-  >
-    <NSpace justify="space-between" align="center" style="width: 100%">
-      <NSpace align="center" :size="8">
-        <slot name="control" />
-        <span>{{ label }}</span>
-      </NSpace>
-      <MirrorSettingHelp v-if="help" :text="help" />
-    </NSpace>
-  </NFormItem>
-
-  <NFormItem
-    v-else
-    :label="label"
-    label-placement="left"
-    label-align="left"
-    label-width="auto"
-    :show-feedback="false"
-    :style="nested ? { paddingLeft: '0.75rem' } : null"
-  >
-    <NSpace align="center" :size="8" style="width: 100%">
-      <div style="flex: 1; min-width: 0">
-        <slot />
-      </div>
-      <MirrorSettingHelp v-if="help" :text="help" />
-    </NSpace>
-  </NFormItem>
+  <div v-else class="mirror-setting-row" :class="{ 'mirror-setting-row--nested': nested }">
+    <label class="mirror-setting-row__label" :title="label">{{ label }}</label>
+    <div class="mirror-setting-row__control">
+      <slot />
+    </div>
+    <MirrorSettingHelp v-if="help" :text="help" />
+  </div>
 </template>

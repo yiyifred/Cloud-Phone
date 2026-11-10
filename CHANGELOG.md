@@ -11,6 +11,8 @@
 - **Waydroid 端到端投屏验证（T-437）**：Waydroid 作为被控设备接入后端，明文 `ws://` 与 `BACKEND_TLS=1` 的 `wss://` 两条链路各自抓到 23 个视频包、约 424 KB Annex-B 帧；`ffprobe` 识别为 `h264 1280x768`、可解 22 帧；设备在 Web UI 画廊显示在线（`192.168.240.112:5555`）
 - **投屏协议要点**：客户端连 `/api/devices/<serial>/cast/ws` 后必须补发 type-101 视频参数包，否则 `WsCastSession.join()` 停在 "waiting for stream parameters" 不出帧
 - 任务单 `tasks/T-437`
+- **控制台界面收口（T-439）**：设备画廊缩略图改为 13rem 等高预览区，图片加载失败自动退化占位（不再显示破图 alt 文本），长产品名两行省略；投屏中底栏只保留红色「取消投屏」，未投屏只保留「开始投屏」；投屏设置行改成「标签 8rem / 控件 / 帮助问号」三列网格，中文标签不再被裁、问号不再掉行
+- **截图接口修复（T-439）**：Waydroid 等设备上 `adb exec-out screencap -p` 会把 PNG 当文本返回（内容形如 `/vendor/...`），前端因此永远拿不到缩略图；现在校验 PNG 魔数，失败自动回退 `adb shell screencap -p` + `adb pull` 的二进制安全路径
 
 ## 1.28.0 - 2026-11-08
 
