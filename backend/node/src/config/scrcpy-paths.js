@@ -154,7 +154,7 @@ export function getScrcpyServerDiagnostics() {
 
 // Must match backend/source/scrcpy/server/build.gradle versionName exactly.
 // Keep it "4.0" so the official scrcpy desktop client can run with this server jar.
-export const SCRCPY_SERVER_VERSION = "4.0";
+export const SCRCPY_SERVER_VERSION = "5.0.1";
 
 /** Cloud-Phone web cast uses device-side WebSocket (ws-scrcpy wire), not scrcpy TCP sockets. */
 export const SCRCPY_WEB_CAST_MODE = true;

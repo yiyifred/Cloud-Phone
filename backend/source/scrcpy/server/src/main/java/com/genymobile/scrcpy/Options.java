@@ -81,6 +81,7 @@ public class Options {
     String startApp;
 
     boolean keepActive;
+    boolean ignoreVideoEncoderConstraints;
 
     Orientation.Lock captureOrientationLock = Orientation.Lock.Unlocked;
     Orientation captureOrientation = Orientation.Orient0;
@@ -288,6 +289,10 @@ public class Options {
 
     public boolean getVDSystemDecorations() {
         return vdSystemDecorations;
+    }
+
+    public boolean getIgnoreVideoEncoderConstraints() {
+        return ignoreVideoEncoderConstraints;
     }
 
     public boolean getKeepActive() {

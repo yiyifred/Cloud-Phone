@@ -152,7 +152,13 @@ public class CameraCapture extends SurfaceCapture {
         filter.addAngle(angle);
 
         transform = filter.getInverseTransform();
-        videoSize = filter.getOutputSize().constrain(videoConstraints);
+        videoSize = filter.getOutputSize().align(videoConstraints.getAlignment());
+
+        if (!videoSize.equals(captureSize) && transform == null) {
+            // The camera stream can only be rendered on a surface matching the input size.
+            // If the video constraints change the size, an intermediate OpenGL filter is required.
+            transform = AffineMatrix.IDENTITY;
+        }
     }
 
     @TargetApi(AndroidVersions.API_30_ANDROID_11)
@@ -240,6 +246,14 @@ public class CameraCapture extends SurfaceCapture {
     public void stop() {
         cameraHandler.post(() -> {
             assertCameraThread();
+            if (currentSession != null) {
+                try {
+                    currentSession.stopRepeating();
+                } catch (CameraAccessException | IllegalStateException e) {
+                    // The session may already be closed (for example if the camera has been disconnected)
+                    Ln.d("Could not stop repeating capture request: " + e.getMessage());
+                }
+            }
             currentSession = null;
             requestBuilder = null;
             started = false;

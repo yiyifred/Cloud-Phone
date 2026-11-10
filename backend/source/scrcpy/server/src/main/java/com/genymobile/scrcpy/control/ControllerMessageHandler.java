@@ -96,6 +96,9 @@ final class ControllerMessageHandler {
                 case ControlMessage.TYPE_RESIZE_DISPLAY:
                     controller.resizeDisplay(msg.getWidth(), msg.getHeight());
                     return true;
+                case ControlMessage.TYPE_SCAN_FILE:
+                    controller.scanFile(msg.getText());
+                    return true;
                 default:
                     break;
             }
