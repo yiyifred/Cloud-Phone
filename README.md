@@ -4,7 +4,7 @@
 
 **用浏览器连真机：投屏、触控、文件、应用、终端，都在一个页面里；另有 Android 伴侣 App，在手机上管理设备与全屏投屏。**
 
-当前版本：**v1.22.5** · Node 后端 + Vue 3 Web + Android 客户端 · Android scrcpy 4.0 WebSocket + 鸿蒙 HDC JPEG + iOS WDA MJPEG 投屏
+当前版本：**v1.29.1** · Node 后端 + Vue 3 Web + Android 客户端 · Android scrcpy 5.0.1 WebSocket + 鸿蒙 HDC JPEG + iOS WDA MJPEG 投屏
 
 [English](README.EN.md) · **中文**
 
@@ -61,7 +61,7 @@ Cloud Phone 就是把这件事做成一个本地 Web 控制台：后端用内置
 
 | 点 | 说明 |
 |---|---|
-| **浏览器投屏** | H.264 经 WebSocket 推到画布，WebCodecs 硬解；触摸/鼠标按 scrcpy 4.0 协议注入 |
+| **浏览器投屏** | H.264 经 WebSocket 推到画布，WebCodecs 硬解；触摸/鼠标按 scrcpy 5.0.1 协议注入 |
 | **官方 4.0 底座** | 在 `backend/source/scrcpy` 上移植 WebSocket，server 版本与桌面客户端一致，避免 jar 版本打架 |
 | **参数够全** | 镜像：裁剪、采集方向、虚拟屏预设、音频源/编码器、关屏保活等；摄像头模式：手电、变焦（Android 12+） |
 | **不投屏也能干活** | 文件管理、应用管理、ADB 终端、画廊截屏——设备在线即可，不必先开 cast |
@@ -169,7 +169,7 @@ images/readme/
 - `POST .../cast/start` 启动；浏览器连 `WebSocket .../cast/ws`；`cast/start` 与 `cast/status` 返回 `startupLogs`（adb push、forward、shell 等）
 - 右侧画布在连接阶段显示启动日志（含「前端 scrcpy 启动成功」等），**首帧渲染后自动隐藏**；全屏模式同样显示在同一块画布上
 - 非全屏时控制工具栏固定于设备名称下方；全屏时仍为悬浮工具栏
-- 设备端自编译 **scrcpy-server 4.0**（缺 jar 时后端 Gradle 自动编译）；启动前 `pkill` 残留进程，避免 **8886** 占用
+- 设备端 **scrcpy-server 5.0.1**：仓库不附带 jar，首次投屏时控制台弹出安装面板，可上传、从 GitHub 下载、从 gh-proxy.com 下载或手动放置到 `backend/bin/scrcpy/<平台>/scrcpy-server`；启动前 `pkill` 残留进程，避免 **8886** 占用
 - 参数经 WebSocket **type 101** 热更新（`codecOptions` / stream extras）；投屏中会锁定左侧表单，防止误改
 - 画布触控：坐标按**解码后视频尺寸**映射（与 server `PositionMapper` 一致）；鼠标悬停/按下/拖动/抬起走 scrcpy SDK 协议
 
@@ -428,11 +428,13 @@ cd frontend/web
 npm run start   # build 后托管 dist/
 ```
 
-首次投屏若提示 server 未编译，需 **JDK 17+** 与 Android SDK，执行：
+首次投屏若提示设备端 scrcpy-server 未安装，控制台会弹出安装面板，三种方式任选：
 
-```powershell
-node tools/build-scrcpy-server.mjs
-```
+1. 上传本地 `scrcpy-server-android-5.0.1.jar`
+2. 点「GitHub 直连」或「gh-proxy.com 加速」直接下载
+3. 手动放到 `backend/bin/scrcpy/linux/scrcpy-server`，macos 与 windows 目录同理，然后点刷新
+
+后端不再在缺 jar 时自动调用 Gradle。
 
 ---
 
@@ -442,7 +444,7 @@ node tools/build-scrcpy-server.mjs
 Cloud-Phone/
 ├── scripts/               # 三平台自动安装向导（install-linux/macos/windows）
 ├── backend/node/          # Node HTTP + WebSocket API
-├── backend/source/scrcpy/         # scrcpy 4.0 源码 + WebSocket 改造
+├── backend/source/scrcpy/         # scrcpy 5.0.1 源码 + WebSocket 改造
 ├── backend/source/WebDriverAgent/ # iOS WebDriver 服务（Appium WDA，待集成）
 ├── backend/bin/           # adb、scrcpy 预编译产物
 ├── frontend/web/          # Vue 3 + Vite + Naive UI（Web 控制台）
@@ -481,19 +483,22 @@ Cloud-Phone/
 
 ---
 
-## 构建 scrcpy
+## 设备端 scrcpy-server
 
-**Web 投屏**依赖魔改 `scrcpy-server`（与 Windows/Linux/macOS 无关，但须在任一系统上用 Gradle 编出）：
+Web 投屏依赖魔改 `scrcpy-server`。它是 Android 端 jar，与宿主系统无关，三个平台共用同一份文件。安装方式有三种：
+
+- 控制台安装面板上传本地 jar
+- 控制台点「GitHub 直连」或「gh-proxy.com 加速」下载
+- 手动放到 `backend/bin/scrcpy/linux/scrcpy-server`，macos 与 windows 目录同理
+
+对应接口：`GET /api/scrcpy/server`、`POST /api/scrcpy/server/upload`、`POST /api/scrcpy/server/download`。
+
+改协议或跟上游同步时需要自己编（需 JDK 17+ 与 Android SDK）：
 
 ```powershell
-# 魔改 server（当前系统需 JDK 17+、Android SDK）
-node tools/build-scrcpy-server.mjs
-
-# 同时写入 backend/bin/scrcpy/windows|linux|macos/（跨平台部署推荐）
+# 编出 jar 并写入三个平台目录
 node tools/build-scrcpy-server.mjs --all-platforms
 ```
-
-**Linux / macOS** 上若只跑 Node 后端 + 浏览器，执行 `--all-platforms` 即可；**不必**在本机再编 scrcpy 客户端。
 
 可选：在本机用 Meson 编译 **scrcpy 桌面客户端**（会捆绑魔改 server，不再使用官方 `install_release.sh`）：
 

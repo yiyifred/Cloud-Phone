@@ -4,6 +4,9 @@ export function startDeviceCast(serial, options = {}) {
   return requestJson(`/api/devices/${encodeURIComponent(serial)}/cast/start`, {
     method: "POST",
     body: options,
+    // Cast start returns a typed error body (409 scrcpy_server_missing) that the
+    // workspace turns into the install dialog, so failures must not throw.
+    allowFailure: true,
   });
 }
 

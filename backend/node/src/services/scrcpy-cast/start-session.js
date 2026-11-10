@@ -8,7 +8,7 @@ import {
   SCRCPY_SERVER_VERSION,
   SCRCPY_WEB_CAST_MODE,
 } from "../../config/scrcpy-paths.js";
-import { ensureScrcpyServerBuilt } from "../scrcpy-build.js";
+import { requireScrcpyServer } from "../scrcpy-build.js";
 import { runWithAdbLock } from "../adb-lock.js";
 import { adbForward, adbForwardTcp, adbPush, clearDeviceTunnels, listAdbForward } from "../adb-command.js";
 import { logCastError, logCastInfo, logCastWarn } from "./cast-logger.js";
@@ -120,7 +120,7 @@ function tryAttachToLiveSession(serial, options) {
 }
 
 export async function startScrcpyCast(serial, options = {}) {
-  await ensureScrcpyServerBuilt();
+  requireScrcpyServer();
 
   const jarPath = getScrcpyServerJarPath();
   const jarInfo = describeServerJar(jarPath);

@@ -1,6 +1,6 @@
 import { APP_VERSION } from "../config/version.js";
 import { isScrcpyServerReady, getScrcpyServerDiagnostics } from "../config/scrcpy-paths.js";
-import { ensureScrcpyServerBuilt } from "../services/scrcpy-build.js";
+import { requireScrcpyServer } from "../services/scrcpy-build.js";
 import { logCastError, logCastInfo } from "../services/scrcpy-cast/cast-logger.js";
 import {
   getCastSession,
@@ -94,18 +94,26 @@ export async function handleDeviceCastRoute(req, res, method, pathname) {
     logCastInfo(serial, "api.cast.start.request", { method, pathname });
 
     try {
-      await ensureScrcpyServerBuilt();
-    } catch (buildError) {
-      sendProtectedJson(res, 503, {
-        success: false,
-        version: APP_VERSION,
-        error: "scrcpy_server_build_failed",
-        message:
-          buildError instanceof Error
-            ? buildError.message
-            : "scrcpy-server 编译失败。请安装 Android SDK / JDK 17+ 后执行: node tools/build-scrcpy-server.mjs",
-        scrcpyServer: getScrcpyServerDiagnostics(),
-      });
+      requireScrcpyServer();
+    } catch (missingError) {
+      if (missingError?.code === "scrcpy_server_missing") {
+        sendProtectedJson(res, 409, {
+          success: false,
+          version: APP_VERSION,
+          error: "scrcpy_server_missing",
+          message: "设备端 scrcpy-server 未安装。请在页面里上传、下载或手动放置后重试。",
+          install: missingError.install,
+        });
+      } else {
+        sendProtectedJson(res, 503, {
+          success: false,
+          version: APP_VERSION,
+          error: "scrcpy_server_unavailable",
+          message: missingError instanceof Error ? missingError.message : "scrcpy-server 不可用",
+          scrcpyServer: getScrcpyServerDiagnostics(),
+        });
+      }
+
       return true;
     }
 

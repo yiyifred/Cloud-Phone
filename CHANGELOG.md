@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.29.1 - 2026-11-10
+
+**设备端 scrcpy-server 改为显式安装**
+
+- **不再自动编译（T-442）**：`services/scrcpy-build.js` 删掉 Gradle 自动构建，改为 `requireScrcpyServer()`；缺 jar 时投屏接口返回 `409 scrcpy_server_missing`，带 `install.expectedPath` 与平台信息，不再在请求里跑 `node tools/build-scrcpy-server.mjs`
+- **新增安装接口**：`GET /api/scrcpy/server`（状态与目标路径）、`POST /api/scrcpy/server/upload`（裸二进制，32 MB 上限，校验 ZIP 头与 `classes.dex`）、`POST /api/scrcpy/server/download`（`source=github|ghproxy`）；安装走临时文件加 rename，已存在的兄弟平台副本同步刷新
+- **控制台安装面板**：投屏失败时自动弹出 `ScrcpyServerSetupModal.vue`，提供上传、GitHub 直连、gh-proxy.com 加速、手动放置与复制路径四种入口；`startDeviceCast()` 改 `allowFailure`，由 `cast-session.js` 识别 409
+- **下载实现**：`utils/http-download.js` 用 curl（继承 `HTTPS_PROXY`、跟随重定向、限制 32 MB），没有 curl 时回退 `fetch`
+- **实测**：无 jar 时 `cast/start` → 409；`download ghproxy` → 200 并落盘 819490 B（sha256 `f1eda573…`）；`download github` → 200；上传非 jar → 400 `invalid_scrcpy_server`；安装后 `cast/start` → 200
+- **release 资产改名**：`scrcpy-server-android-5.0.1.jar`（服务端，设备端 jar）与 `cloudphone-client-android-1.29.0-debug.apk`（客户端，手机 App），README 中英双语同步安装流程
+
 ## 1.29.0 - 2026-11-10
 
 - **scrcpy 设备端升级到上游 v5.0.1（T-441）**：`backend/source/scrcpy` 基线由 4.0 同步到 5.0.1，保留 `ws/` WebSocket 投屏改造；`SCRCPY_SERVER_VERSION` 同步为 `5.0.1`，`backend/bin/scrcpy/{linux,macos,windows}/scrcpy-server` 重新编译（819 KB）

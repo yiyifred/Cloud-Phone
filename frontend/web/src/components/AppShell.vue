@@ -8,6 +8,7 @@ import ConsoleLayout from "./ConsoleLayout.vue";
 import IconHelperGatePanel from "./IconHelperGatePanel.vue";
 import ReadOnlyBanner from "./ReadOnlyBanner.vue";
 import ConfirmDialog from "./ui/ConfirmDialog.vue";
+import ScrcpyServerSetupModal from "./ScrcpyServerSetupModal.vue";
 import SkeletonCard from "./ui/SkeletonCard.vue";
 import { markViewerSession, useAccessRole } from "../composables/useAccessRole.js";
 import { useAppFeedback } from "../composables/useAppFeedback.js";
@@ -296,5 +297,7 @@ async function saveSettingsForm() {
     />
     <!-- 全局确认框：所有 window.confirm 的替代品，样式/语言/危险态统一 -->
     <ConfirmDialog />
+    <!-- 设备端 scrcpy-server 缺失时由投屏失败路径打开 -->
+    <ScrcpyServerSetupModal />
   </div>
 </template>
