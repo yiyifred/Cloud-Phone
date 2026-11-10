@@ -44,17 +44,16 @@
 
 .device-card__preview {
   position: relative;
-  /* 9/16 对平板类设备过高；3/4 配合 object-fit: contain 保证任何比例都不被裁 */
-  aspect-ratio: 3 / 4;
-  min-height: 12rem;
+  /* 统一 13rem 高：竖屏截图不会被拉成 3/4 的高盒子，横屏截图也不会把卡片撑高，
+     同一行卡片高度一致，画廊不会出现一条高一条矮 */
+  height: 13rem;
   background: var(--bg-preview);
 }
 
 /* 离线设备没有画面可看，竖屏 3/4 只会留下一个巨大空白盒；
    压缩成 16/10，让画廊里多台离线设备也能一屏排下 */
 .device-card--offline .device-card__preview {
-  aspect-ratio: 16 / 10;
-  min-height: 9rem;
+  height: 13rem;
   background-image: radial-gradient(
     circle at 50% 45%,
     color-mix(in srgb, var(--line) 45%, transparent),
@@ -154,6 +153,11 @@
   font-size: 0.84rem;
   line-height: 1.35;
   word-break: break-word;
+  /* 产品名/序列号这类长值最多两行，超出省略，避免把一个字段撑成三行把格子顶歪 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .device-card__mono {

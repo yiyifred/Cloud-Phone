@@ -208,13 +208,14 @@ defineExpose({ stepPreviewRotationDeg });
           :message="'设备未在线，无法投屏。'"
         />
 
-        <NButton block :disabled="!casting || castBusy" @click="handleStopClick">
+        <NButton v-if="casting" block type="error" ghost :disabled="castBusy" @click="handleStopClick">
           取消投屏
         </NButton>
         <NButton
+          v-else
           block
           type="primary"
-          :disabled="!canStartCast || casting || castBusy"
+          :disabled="!canStartCast || castBusy"
           :loading="castBusy"
           @click="handleStartClick"
         >
