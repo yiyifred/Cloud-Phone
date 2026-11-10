@@ -186,8 +186,15 @@ button {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
 
+/* 键盘焦点环：覆盖所有可聚焦元素，之前只写 button/input，
+   select/textarea/链接/自定义 tabindex 元素（设备卡、画廊项、标签页）键盘走查时完全没有焦点提示 */
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
