@@ -29,9 +29,9 @@
 | 依赖 | `Java-WebSocket`、slf4j | 无第三方网络库 |
 | 包结构 | 扁平 `com.genymobile.scrcpy.*`（约 42 个类） | 子包 `device/` `video/` `control/` 等（约 89 个类） |
 
-**Cloud-Phone 目标**：在 **`backend/source/scrcpy`（官方 4.0）** 上移植 WebSocket 能力与 ws-scrcpy 线协议，本地编译 `scrcpy-server`（版本号与官方桌面客户端一致：`4.0`），避免 `scrcpy.exe` 直连时报版本不匹配。**不要**长期依赖预编译的 `1.19-ws7` jar。
+**Cloud-Phone 目标**：在 **`backend/source/scrcpy`（官方 4.0）** 上移植 WebSocket 能力与 ws-scrcpy 线协议，本地编译 `scrcpy-server`（版本号与官方桌面客户端一致：`5.0.1`），避免 `scrcpy.exe` 直连时报版本不匹配。**不要**长期依赖预编译的 `1.19-ws7` jar。
 
-**当前运行时**：`SCRCPY_SERVER_VERSION=4.0`；`SCRCPY_WEB_CAST_MODE=true` 时 Node 走 `web DEBUG 8886` 与 `/cast/ws` 代理。启动前会 `pkill -f com.genymobile.scrcpy.Server` 清理残留进程，避免 `8886` 端口占用。
+**当前运行时**：`SCRCPY_SERVER_VERSION=5.0.1`（设备端 server 源码已同步到上游 v5.0.1，见下节「与上游同步」）；`SCRCPY_WEB_CAST_MODE=true` 时 Node 走 `web DEBUG 8886` 与 `/cast/ws` 代理。启动前会 `pkill -f com.genymobile.scrcpy.Server` 清理残留进程，避免 `8886` 端口占用。
 
 ## Cloud Phone 扩展参数
 
@@ -111,3 +111,25 @@ node tools/build-scrcpy-server.mjs --all-platforms
 ```
 
 保留清单见 `tools/scrcpy-upstream-manifest.js`（WebSocket、`list_all_apps`、Controller 拆分等不会被子覆盖）。
+
+## 与上游同步（v5.0.1）
+
+设备端 server 源码基线由 4.0 升到 **v5.0.1**（2026-10-08），保留本仓库全部 WebSocket / ws-scrcpy 线协议改造。同步进来的上游能力：
+
+| 来源版本 | 能力 | 落地文件 |
+|---|---|---|
+| 4.1 | VP8 / VP9 视频编码器 | `video/VideoCodec.java`（新增 `VP8(0x00767038)`、`VP9(0x00767039)`） |
+| 4.1 | 编码器尺寸约束改为「先失败再收紧」，新增 `--ignore-video-encoder-constraints` | `video/VideoConstraints.java`、`video/SurfaceEncoder.java`、`model/Size.java`、`util/BinarySearch.java`、`Options.java`、`OptionsParsing.java` |
+| 4.1 | 推文件后触发 MediaStore 扫描（控制消息 22） | `control/ControlMessage.java`、`control/ControlMessageReader.java`、`control/ControllerMessageHandler.java`（`TYPE_SCAN_FILE`）、`device/Device.java`（`sendBroadcast`） |
+| 4.1 | 摄像头目标尺寸自适应、停止时避免 `camera capture failed` 噪声 | `video/CameraCapture.java` |
+| 5.0 | 播放音频采集覆盖所有 usage | `audio/AudioPlaybackCapture.java` |
+| 5.0 | 新显示器 resize 时用 `constrain(..., false)` 并固定 dpi | `video/NewDisplayCapture.java` |
+
+未同步的部分：`app/`（桌面 C/SDL 客户端）与 `doc/` 仍是 4.0 源码 —— 本仓库只构建设备端 `scrcpy-server`，桌面客户端从不编译，故未移植其 5.0 硬解代码（`--hwdec`）。若以后要构建桌面客户端，需整目录同步并重做 `app/src/cloud_phone` 的接缝。
+
+保留的本仓库改造（升级后逐项复核，行为不变）：
+
+- `ws/`（10 个类）：WebSocket 服务、`scrcpy_initial` 握手、type-101 流参数、Annex-B 组帧、PCM 音频通道
+- `video/VideoSink.java`：把 `Streamer` 抽象成接口，WebSocket 与 TCP 两种出口
+- `SurfaceEncoder`：`INFO_OUTPUT_FORMAT_CHANGED` 时用 MediaFormat 的 csd-0/csd-1 拼完整 SPS+PPS；`applyStreamTuning()` 不做采集重建；虚拟屏被拒时不再重试降分辨率
+- `Controller.resetVideo()`：客户端要关键帧改 `requestSyncFrame()`，不重建采集（Waydroid 重建后只出 CSD 的老问题）

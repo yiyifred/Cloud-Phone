@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.29.0 - 2026-11-10
+
+- **scrcpy 设备端升级到上游 v5.0.1（T-441）**：`backend/source/scrcpy` 基线由 4.0 同步到 5.0.1，保留 `ws/` WebSocket 投屏改造；`SCRCPY_SERVER_VERSION` 同步为 `5.0.1`，`backend/bin/scrcpy/{linux,macos,windows}/scrcpy-server` 重新编译（819 KB）
+- **同步 4.1 能力**：VP8 / VP9 视频编码器；编码器尺寸约束改为「先尝试、失败再收紧」并新增 `--ignore-video-encoder-constraints`（`VideoConstraints` + `Size` + `BinarySearch`）；推文件后触发 MediaStore 扫描（控制消息 `TYPE_SCAN_FILE`）；摄像头目标尺寸自适应与停止时的噪声抑制
+- **同步 5.0 能力**：播放音频采集覆盖所有 usage；新显示器 resize 使用 `constrain(..., false)` 并固定 dpi
+- **保留的 Web 化改造逐项复核**：MediaFormat csd-0/csd-1 拼完整 SPS+PPS、type-101 不重建采集（`applyStreamTuning`）、虚拟屏被拒不重试降分辨率、`resetVideo()` 改请求关键帧
+- **实测**：Waydroid（192.168.240.112:5555）ws 投屏出帧 12 帧 / 101 KB（h264）、23 帧 / 380 KB（h265）、12 帧（vp9）；重复 type-101 场景仍为 12 帧（守卫生效）
+
 ## 1.28.1 - 2026-11-09
 
 **Android 编译修复 · Waydroid 端到端投屏验证**

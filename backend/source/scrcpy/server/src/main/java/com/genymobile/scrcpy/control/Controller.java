@@ -382,4 +382,19 @@ public class Controller implements AsyncProcessor, VirtualDisplayListener {
         captureControl.requestSyncFrame();
     }
 
+
+    /** Request a MediaStore scan for a pushed file (upstream scrcpy 4.1 feature). */
+    void scanFile(String path) {
+        if (path == null || path.isEmpty()) {
+            return;
+        }
+        try {
+            @SuppressWarnings("deprecation")
+            android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
+                    android.net.Uri.fromFile(new java.io.File(path)));
+            Device.sendBroadcast(intent);
+        } catch (Throwable t) {
+            Ln.e("MediaStore scan failed for " + path, t);
+        }
+    }
 }

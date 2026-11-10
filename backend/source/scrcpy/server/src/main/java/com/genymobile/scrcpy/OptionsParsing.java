@@ -267,6 +267,9 @@ final class OptionsParsing {
                 case "display_ime_policy":
                     options.displayImePolicy = OptionsValueParsers.parseDisplayImePolicy(value);
                     break;
+                case "ignore_video_encoder_constraints":
+                    options.ignoreVideoEncoderConstraints = Boolean.parseBoolean(value);
+                    break;
                 case "keep_active":
                     options.keepActive = Boolean.parseBoolean(value);
                     break;

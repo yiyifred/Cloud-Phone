@@ -161,7 +161,7 @@ public class NewDisplayCapture extends SurfaceCapture {
 
         if (!flexDisplay) {
             Size outputSize = filter.getOutputSize();
-            Size filteredSize = outputSize.constrain(videoConstraints);
+            Size filteredSize = outputSize.constrain(videoConstraints, false);
             if (!filteredSize.equals(outputSize)) {
                 filter.addResize(filteredSize);
             }
@@ -333,7 +333,7 @@ public class NewDisplayCapture extends SurfaceCapture {
 
     private synchronized void triggerResize(Size size) {
         if (virtualDisplay != null) {
-            size = size.constrain(videoConstraints); // in case the constraints have changed
+            size = size.constrain(videoConstraints, false); // in case the constraints have changed
             int displayId = virtualDisplay.getDisplay().getDisplayId();
             DisplayInfo displayInfo = ServiceManager.getDisplayManager().getDisplayInfo(displayId);
             int displayRotation = displayInfo.getRotation();
