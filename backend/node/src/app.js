@@ -17,6 +17,7 @@ import { handleIosDeviceRoute } from "./routes/ios-device-routes.js";
 import { handleIosWdaPipelineRoute } from "./routes/ios-wda-pipeline-routes.js";
 import { handleLocalPersistenceRoute } from "./routes/local-persistence-routes.js";
 import { handleScrcpyRoute } from "./routes/scrcpy-routes.js";
+import { handleScrcpyServerRoute } from "./routes/scrcpy-server-routes.js";
 import { SHARE_COOKIE_NAME } from "./config/auth.js";
 import {
   getSessionTokenFromCookies,
@@ -250,6 +251,10 @@ export function createRequestHandler() {
     }
 
     if (await handleDeviceRoute(req, res, method, pathname, requestUrl)) {
+      return;
+    }
+
+    if (await handleScrcpyServerRoute(req, res, method, pathname)) {
       return;
     }
 

@@ -20,6 +20,7 @@ import {
 } from "../utils/build-cast-payload.js";
 import { buildCastOptionsForDevice } from "../utils/harmony-cast-options.js";
 import { startDeviceCast, stopDeviceCast } from "../utils/cast-api.js";
+import { openScrcpyServerSetup } from "../utils/scrcpy-server-setup-state.js";
 import {
   formatVirtualDisplayUserMessage,
   isVirtualDisplayError,
@@ -280,6 +281,17 @@ async function startCast(options) {
       props.device.serial,
       buildCastOptionsForDevice(props.device, castOptions.value),
     );
+
+    if (castPayload?.error === "scrcpy_server_missing") {
+      castHint.value = castPayload.message ?? "设备端 scrcpy-server 未安装";
+      openScrcpyServerSetup({
+        reason: "投屏启动时未找到设备端 scrcpy-server",
+        detail: castPayload.install ?? null,
+      });
+      castBusy.value = false;
+      return;
+    }
+
     const isJpegSession =
       isJpegDevice ||
       castPayload?.castProtocol === "harmony-jpeg" ||

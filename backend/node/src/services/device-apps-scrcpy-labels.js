@@ -1,6 +1,6 @@
 import { SCRCPY_SERVER_VERSION } from "../config/scrcpy-paths.js";
 import { adbExecOut, adbPush } from "./adb-command.js";
-import { ensureScrcpyServerBuilt } from "./scrcpy-build.js";
+import { requireScrcpyServer } from "./scrcpy-build.js";
 import { getRemoteJarPath } from "./scrcpy-cast/server-args.js";
 
 const REMOTE_JAR_PATH = getRemoteJarPath();
@@ -63,7 +63,7 @@ export function parseScrcpyAppListOutput(stdout) {
 }
 
 export async function pushScrcpyServer(serial) {
-  const jarPath = await ensureScrcpyServerBuilt();
+  const jarPath = requireScrcpyServer();
   await adbPush(serial, jarPath, REMOTE_JAR_PATH);
 }
 

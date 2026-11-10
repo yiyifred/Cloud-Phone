@@ -18,6 +18,7 @@ import { isAudioOnlyCast } from "../../utils/scrcpy-cast-helpers.js";
 import { WsScrcpyAnnexBPlayer } from "../../utils/ws-scrcpy-annexb-player.js";
 import { WsScrcpyAudioCanvas } from "../../utils/ws-scrcpy-audio-canvas.js";
 import { useScrcpyCastRecording } from "../useScrcpyCastRecording.js";
+import { openScrcpyServerSetup } from "../../utils/scrcpy-server-setup-state.js";
 
 export function createCastSession({
   ctx,
@@ -132,6 +133,14 @@ export function createCastSession({
     try {
       const options = unref(castOptionsRef) ?? { maxSize: 1024 };
       const payload = await startDeviceCast(serial, options);
+
+      if (payload?.error === "scrcpy_server_missing") {
+        ctx.status.value = "error";
+        ctx.errorMessage.value = payload.message ?? "设备端 scrcpy-server 未安装";
+        openScrcpyServerSetup({ reason: "投屏启动时未找到设备端 scrcpy-server", detail: payload.install ?? null });
+        throw new Error(ctx.errorMessage.value);
+      }
+
       await beginCast(payload);
     } catch (error) {
       ctx.status.value = "error";

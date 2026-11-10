@@ -4,7 +4,7 @@
 
 **Manage real Android devices in the browser: cast, control, files, apps, and shell — plus an Android companion app for the gallery and fullscreen cast on your phone.**
 
-Current version: **v1.22.5** · Node backend + Vue 3 web + Android app · Android scrcpy 4.0 WebSocket + HarmonyOS HDC JPEG + iOS WDA MJPEG cast
+Current version: **v1.29.1** · Node backend + Vue 3 web + Android app · Android scrcpy 5.0.1 WebSocket + HarmonyOS HDC JPEG + iOS WDA MJPEG cast
 
 [中文](README.md) · **English**
 
@@ -171,7 +171,7 @@ Images are embedded in the corresponding feature sections below.
 - `POST .../cast/start` to start; browser connects to `WebSocket .../cast/ws`; `cast/start` and `cast/status` return `startupLogs` (adb push, forward, shell, etc.)
 - The right canvas shows startup logs while connecting (including frontend scrcpy ready); logs **hide after the first rendered frame**; fullscreen uses the same canvas overlay
 - Non-fullscreen toolbar is docked below the device name; fullscreen keeps the floating toolbar
-- Device runs a locally built **scrcpy-server 4.0** (backend auto-builds via Gradle when missing)
+- Device runs **scrcpy-server 5.0.1**: the repository does not ship the jar, so the first cast opens an install panel in the console (upload, GitHub download, gh-proxy.com download, or copy to `backend/bin/scrcpy/<platform>/scrcpy-server`)
 - Startup kills leftover `com.genymobile.scrcpy.Server` processes to avoid port **8886** conflicts
 - Stream extras go over WebSocket type **101** (`codecOptions` / stream extras); left panel locks while casting to avoid accidental edits
 - Touch coordinates use the **decoded video size**, aligned with server `PositionMapper`; mouse hover/press/drag/release follow scrcpy SDK semantics
@@ -433,11 +433,13 @@ cd frontend/web
 npm run start   # build then serve dist/
 ```
 
-If you see an error about the scrcpy server JAR not being built, install JDK 17+ and Android SDK, then run:
+When the device side `scrcpy-server` is missing, the console opens an install panel with three choices:
 
-```powershell
-node tools/build-scrcpy-server.mjs
-```
+1. Upload `scrcpy-server-android-5.0.1.jar`
+2. Download with `GitHub` or with `gh-proxy.com`
+3. Copy the jar to `backend/bin/scrcpy/linux/scrcpy-server` (also `macos`, `windows`) and press refresh
+
+The backend no longer runs Gradle automatically when the jar is missing.
 
 ---
 
@@ -483,16 +485,21 @@ Protected routes require a valid session cookie (sign in first). JSON bodies and
 
 ---
 
-## Building scrcpy
+## Device side scrcpy-server
 
-**Web cast** needs the modded `scrcpy-server` (same Android APK for every host OS; build once with Gradle):
+Web cast needs the modded `scrcpy-server`. It is an Android jar, identical on every host OS. Three install paths:
+
+- Upload it from the console install panel
+- Download it from `GitHub` or `gh-proxy.com` in the same panel
+- Copy it to `backend/bin/scrcpy/linux/scrcpy-server` (also `macos`, `windows`)
+
+Endpoints: `GET /api/scrcpy/server`, `POST /api/scrcpy/server/upload`, `POST /api/scrcpy/server/download`.
+
+Building it yourself (JDK 17+ and Android SDK) is only needed when changing the wire protocol or syncing upstream:
 
 ```powershell
-node tools/build-scrcpy-server.mjs
-node tools/build-scrcpy-server.mjs --all-platforms   # install jar under windows/linux/macos
+node tools/build-scrcpy-server.mjs --all-platforms
 ```
-
-On **Linux / macOS**, if you only run the Node backend in a browser, `--all-platforms` is enough; a desktop `scrcpy` binary is optional.
 
 Optional client build (Meson + Ninja; embeds the modded server, no `install_release.sh`):
 
